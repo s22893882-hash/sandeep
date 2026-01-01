@@ -11,3 +11,5 @@ safety==2.3.5
 faker==20.1.0
 factory-boy==3.3.0
 httpx==0.25.2
+playwright==1.40.0
+requests==2.31.0

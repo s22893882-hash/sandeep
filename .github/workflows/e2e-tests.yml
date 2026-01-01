@@ -1,0 +1,144 @@
+name: E2E Tests
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    # Run E2E tests daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+env:
+  PYTHON_VERSION: '3.11'
+  NODE_VERSION: '20'
+
+jobs:
+  e2e-tests:
+    name: Run E2E Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          cd backend
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+
+      - name: Install Playwright browsers
+        run: |
+          playwright install chromium
+          playwright install-deps chromium
+
+      - name: Set up environment
+        run: |
+          cd backend
+          cat > .env << EOF
+          ENVIRONMENT=test
+          DEBUG=true
+          DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/test_db
+          REDIS_URL=redis://localhost:6379/0
+          SECRET_KEY=test-secret-key-for-e2e-tests
+          LOG_LEVEL=WARNING
+          DOCS_ENABLED=false
+          EOF
+
+      - name: Run backend server
+        run: |
+          cd backend
+          python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+          sleep 10
+
+      - name: Check backend health
+        run: |
+          for i in {1..30}; do
+            if curl -f http://localhost:8000/health; then
+              echo "Backend is ready"
+              exit 0
+            fi
+            echo "Waiting for backend... attempt $i"
+            sleep 2
+          done
+          echo "Backend failed to start"
+          exit 1
+
+      - name: Run E2E tests
+        run: |
+          export E2E_API_URL=http://localhost:8000
+          pytest e2e/test_api_e2e.py -v --tb=short --cov=e2e --cov-report=xml --cov-report=term-missing
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./coverage.xml
+          flags: e2e
+          name: e2e-coverage
+          fail_ci_if_error: false
+
+      - name: Upload E2E test results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: e2e-test-results
+          path: |
+            htmlcov/
+            .pytest_cache/
+          retention-days: 7
+
+      - name: Comment PR with E2E results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const comment = `## E2E Test Results 🧪
+
+            ### Summary
+            - Status: ${{ job.status }}
+            - Environment: Test
+            - Run on: ${{ github.ref }}
+
+            ### Details
+            E2E tests have completed. Check the workflow run for detailed logs.`;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
