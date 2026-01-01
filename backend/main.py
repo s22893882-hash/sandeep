@@ -1,6 +1,24 @@
 """
 Simple FastAPI application for demonstration.
 """
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+import os
+
+app = FastAPI(
+    title="Backend API",
+    description="Backend API for the application",
+    version="1.0.0"
+)
+
+# CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 def get_app_version():
@@ -8,12 +26,32 @@ def get_app_version():
     return "1.0.0"
 
 
+@app.get("/api/health")
 def health_check():
     """Health check endpoint."""
     return {
-        "status": "healthy",
+        "status": "ok",
         "version": get_app_version(),
-        "environment": "test",
+        "environment": os.getenv("ENVIRONMENT", "development"),
+    }
+
+
+@app.get("/")
+def root():
+    """Root endpoint."""
+    return {
+        "message": "Welcome to the Backend API",
+        "version": get_app_version(),
+        "docs": "/docs",
+    }
+
+
+@app.get("/api/version")
+def version():
+    """API version endpoint."""
+    return {
+        "version": get_app_version(),
+        "name": "Backend API",
     }
 
 

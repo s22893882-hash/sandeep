@@ -1,12 +1,13 @@
 # Multi-stage build for Python backend
+ARG BUILD_ENV=development
+
 FROM python:3.11-slim as builder
 
-WORKDIR /app
+WORKDIR /build
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
     build-essential \
-    libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements
@@ -23,27 +24,34 @@ WORKDIR /app
 # Install runtime dependencies
 RUN apt-get update && apt-get install -y \
     libpq5 \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy Python dependencies from builder
-COPY --from=builder /root/.local /root/.local
+# Create non-root user
+RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /home/appuser
+ENV HOME=/home/appuser
 
-# Make sure scripts in .local are usable
-ENV PATH=/root/.local/bin:$PATH
+# Copy Python dependencies from builder
+COPY --from=builder /root/.local /home/appuser/.local
+ENV PATH=/home/appuser/.local/bin:$PATH
 
 # Copy application code
-COPY . .
+COPY --chown=appuser:appuser . .
 
-# Create non-root user
-RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
+# Set read-only filesystem where possible
+RUN chmod -R g-w /app
+
+# Install curl for healthcheck
+RUN chmod -R g-w /var/cache
+
 USER appuser
 
 # Expose port
 EXPOSE 8000
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD python -c "import requests; requests.get('http://localhost:8000/health')" || exit 1
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')" || exit 1
 
-# Run application
+# Run application with reload in dev, without in prod
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
