@@ -1,0 +1,115 @@
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: ["Backend CI", "Frontend CI", "Docker Build & Push"]
+    branches: [main]
+    types:
+      - completed
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+jobs:
+  deploy:
+    name: Deploy to ${{ github.event.inputs.environment || 'staging' }}
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    environment:
+      name: ${{ github.event.inputs.environment || 'staging' }}
+      url: ${{ steps.deploy.outputs.url }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup deployment environment
+        run: |
+          echo "Deploying to ${{ github.event.inputs.environment || 'staging' }}"
+          echo "DEPLOY_ENV=${{ github.event.inputs.environment || 'staging' }}" >> $GITHUB_ENV
+
+      - name: Configure kubectl (if using Kubernetes)
+        run: |
+          # Example: Configure kubectl with cluster credentials
+          # echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > kubeconfig
+          # export KUBECONFIG=kubeconfig
+          echo "Kubectl configuration would go here"
+
+      - name: Update backend deployment
+        run: |
+          # Example Kubernetes deployment update
+          # kubectl set image deployment/backend backend=${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE_NAME }}:${{ github.sha }}
+          # kubectl rollout status deployment/backend
+          echo "Backend deployment update would go here"
+
+      - name: Update frontend deployment
+        run: |
+          # Example Kubernetes deployment update
+          # kubectl set image deployment/frontend frontend=${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE_NAME }}:${{ github.sha }}
+          # kubectl rollout status deployment/frontend
+          echo "Frontend deployment update would go here"
+
+      - name: Run database migrations
+        run: |
+          # Example: Run Alembic migrations
+          # kubectl exec deployment/backend -- alembic upgrade head
+          echo "Database migrations would run here"
+
+      - name: Wait for deployment to stabilize
+        run: |
+          echo "Waiting for deployment to stabilize..."
+          sleep 30
+
+      - name: Health check - Backend
+        id: health-backend
+        run: |
+          # Example health check
+          # BACKEND_URL="${{ secrets.BACKEND_URL }}"
+          # curl -f "$BACKEND_URL/health" || exit 1
+          echo "Backend health check would go here"
+          echo "status=healthy" >> $GITHUB_OUTPUT
+
+      - name: Health check - Frontend
+        id: health-frontend
+        run: |
+          # Example health check
+          # FRONTEND_URL="${{ secrets.FRONTEND_URL }}"
+          # curl -f "$FRONTEND_URL" || exit 1
+          echo "Frontend health check would go here"
+          echo "status=healthy" >> $GITHUB_OUTPUT
+
+      - name: Smoke tests
+        run: |
+          # Run basic smoke tests after deployment
+          echo "Running smoke tests..."
+          # Example: curl -f https://api.example.com/health
+          # Example: curl -f https://app.example.com
+
+      - name: Set deployment output
+        id: deploy
+        run: |
+          if [ "${{ env.DEPLOY_ENV }}" == "production" ]; then
+            echo "url=https://app.example.com" >> $GITHUB_OUTPUT
+          else
+            echo "url=https://staging.app.example.com" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Notify deployment status
+        if: always()
+        run: |
+          # Send notification to Slack, Discord, etc.
+          echo "Deployment completed with status: ${{ job.status }}"
+
+      - name: Rollback on failure
+        if: failure()
+        run: |
+          echo "Deployment failed, rolling back..."
+          # kubectl rollout undo deployment/backend
+          # kubectl rollout undo deployment/frontend
