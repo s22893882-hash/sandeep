@@ -70,7 +70,7 @@ def test_user_to_dict():
     """Test user to dictionary conversion."""
     user = User(1, "test@example.com", "testuser")
     user_dict = user.to_dict()
-    
+
     assert user_dict["id"] == 1
     assert user_dict["email"] == "test@example.com"
     assert user_dict["username"] == "testuser"
@@ -82,7 +82,7 @@ def test_user_deactivate():
     """Test user deactivation."""
     user = User(1, "test@example.com", "testuser")
     assert user.is_active is True
-    
+
     user.deactivate()
     assert user.is_active is False
 
@@ -93,7 +93,7 @@ def test_user_activate():
     user = User(1, "test@example.com", "testuser")
     user.deactivate()
     assert user.is_active is False
-    
+
     user.activate()
     assert user.is_active is True
 
@@ -102,18 +102,18 @@ def test_user_activate():
 def test_user_lifecycle():
     """Test complete user lifecycle."""
     user = User(1, "test@example.com", "testuser")
-    
+
     # Initial state
     assert user.is_active is True
-    
+
     # Deactivate
     user.deactivate()
     assert user.is_active is False
-    
+
     # Reactivate
     user.activate()
     assert user.is_active is True
-    
+
     # Check dictionary representation
     user_dict = user.to_dict()
     assert user_dict["is_active"] is True

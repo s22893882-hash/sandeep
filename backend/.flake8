@@ -11,10 +11,10 @@ exclude =
     alembic
 max-complexity = 10
 ignore = 
-    E203,  # whitespace before ':'
-    E501,  # line too long (handled by max-line-length)
-    W503,  # line break before binary operator
-    E402,  # module level import not at top of file
+    E203,
+    E501,
+    W503,
+    E402
 per-file-ignores = 
     __init__.py:F401
     tests/*:F401,F811
