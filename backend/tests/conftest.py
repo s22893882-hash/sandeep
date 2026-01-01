@@ -1,177 +1,130 @@
-import os
-import pytest
-from typing import Generator, AsyncGenerator
-from unittest.mock import Mock, AsyncMock, patch
-import asyncio
+"""Test configuration and fixtures for doctor management system."""
 
-os.environ["ENVIRONMENT"] = "test"
+import pytest
+from datetime import datetime
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from app.core.database import Database
+from app.core.config import settings
 
 
 @pytest.fixture(scope="session")
-def event_loop():
-    """Create an event loop for the test session."""
-    loop = asyncio.get_event_loop_policy().new_event_loop()
-    yield loop
-    loop.close()
+async def test_db():
+    """Create test database connection for the entire test session."""
+    original_db = settings.MONGODB_DATABASE
+    settings.MONGODB_DATABASE = "doctor_management_test"
 
+    # Use in-memory MongoDB for testing or create test specific database
+    if not Database.client:
+        try:
+            import motor
 
-@pytest.fixture
-def mock_db():
-    """Mock database connection."""
-    db = Mock()
-    db.execute = AsyncMock()
-    db.fetch_all = AsyncMock(return_value=[])
-    db.fetch_one = AsyncMock(return_value=None)
-    db.commit = AsyncMock()
-    db.rollback = AsyncMock()
-    db.close = AsyncMock()
-    return db
+            Database.client = motor.motor_asyncio.AsyncIOMotorClient(settings.MONGODB_URL)
+            Database.db = Database.client[settings.MONGODB_DATABASE]
 
+            # Create test indexes
+            await Database.create_indexes()
+        except Exception:
+            pytest.skip("MongoDB not available for testing")
 
-@pytest.fixture
-def test_user():
-    """Create a test user fixture."""
-    return {
-        "id": 1,
-        "email": "test@example.com",
-        "username": "testuser",
-        "is_active": True,
-        "is_verified": True,
-        "created_at": "2024-01-01T00:00:00Z",
-    }
+    yield Database.db
 
-
-@pytest.fixture
-def test_admin_user():
-    """Create a test admin user fixture."""
-    return {
-        "id": 2,
-        "email": "admin@example.com",
-        "username": "adminuser",
-        "is_active": True,
-        "is_verified": True,
-        "is_admin": True,
-        "created_at": "2024-01-01T00:00:00Z",
-    }
-
-
-@pytest.fixture
-def auth_token():
-    """Generate a mock JWT token."""
-    return "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
-
-
-@pytest.fixture
-def mock_jwt_decode():
-    """Mock JWT decode function."""
-    with patch("jwt.decode") as mock:
-        mock.return_value = {
-            "sub": "1",
-            "email": "test@example.com",
-            "exp": 9999999999,
-        }
-        yield mock
-
-
-@pytest.fixture
-def mock_stripe():
-    """Mock Stripe API."""
-    with patch("stripe.Customer") as mock_customer, \
-         patch("stripe.PaymentIntent") as mock_payment, \
-         patch("stripe.Subscription") as mock_subscription:
-        
-        mock_customer.create = Mock(return_value={"id": "cus_test123"})
-        mock_customer.retrieve = Mock(return_value={"id": "cus_test123", "email": "test@example.com"})
-        
-        mock_payment.create = Mock(return_value={"id": "pi_test123", "status": "succeeded"})
-        mock_payment.retrieve = Mock(return_value={"id": "pi_test123", "status": "succeeded"})
-        
-        mock_subscription.create = Mock(return_value={"id": "sub_test123", "status": "active"})
-        
-        yield {
-            "customer": mock_customer,
-            "payment": mock_payment,
-            "subscription": mock_subscription,
-        }
-
-
-@pytest.fixture
-def mock_email_service():
-    """Mock email service."""
-    with patch("smtplib.SMTP") as mock:
-        smtp_instance = Mock()
-        smtp_instance.sendmail = Mock()
-        smtp_instance.quit = Mock()
-        mock.return_value.__enter__ = Mock(return_value=smtp_instance)
-        mock.return_value.__exit__ = Mock()
-        yield smtp_instance
-
-
-@pytest.fixture
-def mock_redis():
-    """Mock Redis connection."""
-    redis = Mock()
-    redis.get = AsyncMock(return_value=None)
-    redis.set = AsyncMock()
-    redis.delete = AsyncMock()
-    redis.exists = AsyncMock(return_value=False)
-    redis.expire = AsyncMock()
-    return redis
-
-
-@pytest.fixture
-def mock_s3_client():
-    """Mock AWS S3 client."""
-    with patch("boto3.client") as mock:
-        s3 = Mock()
-        s3.upload_fileobj = Mock()
-        s3.download_fileobj = Mock()
-        s3.delete_object = Mock()
-        s3.generate_presigned_url = Mock(return_value="https://s3.amazonaws.com/bucket/key")
-        mock.return_value = s3
-        yield s3
-
-
-@pytest.fixture
-async def test_client():
-    """Create a test HTTP client."""
-    from unittest.mock import MagicMock
-    client = MagicMock()
-    client.get = AsyncMock()
-    client.post = AsyncMock()
-    client.put = AsyncMock()
-    client.delete = AsyncMock()
-    client.patch = AsyncMock()
-    return client
-
-
-@pytest.fixture
-def sample_request_data():
-    """Sample request data for testing."""
-    return {
-        "name": "Test Item",
-        "description": "Test description",
-        "price": 99.99,
-        "quantity": 10,
-    }
+    # Cleanup after all tests
+    if Database.client:
+        await Database.client.drop_database(settings.MONGODB_DATABASE)
+    settings.MONGODB_DATABASE = original_db
 
 
 @pytest.fixture(autouse=True)
-def reset_environment():
-    """Reset environment variables after each test."""
-    original_env = os.environ.copy()
+async def cleanup_db(test_db):
+    """Clean up database between tests."""
+    collections = await test_db.list_collection_names()
+    for collection in collections:
+        if not collection.startswith("system."):
+            await test_db[collection].delete_many({})
     yield
-    os.environ.clear()
-    os.environ.update(original_env)
 
 
 @pytest.fixture
-def mock_paypal():
-    """Mock PayPal API."""
-    with patch("paypalrestsdk.Payment") as mock:
-        payment = Mock()
-        payment.create = Mock(return_value=True)
-        payment.id = "PAYID-TEST123"
-        payment.state = "approved"
-        mock.return_value = payment
-        yield payment
+def test_user_data():
+    """Sample user data for testing."""
+    return {"email": "test@example.com", "phone": "1234567890", "name": "Test User", "role": "doctor", "is_active": True}
+
+
+@pytest.fixture
+def test_doctor_data():
+    """Sample doctor data for testing."""
+    return {
+        "license_number": "DOC123456",
+        "license_expiry": datetime.utcnow(),
+        "specializations": [],
+        "qualifications": [],
+        "clinic_address": "123 Medical Plaza",
+        "clinic_phone": "617-555-0123",
+        "consultation_fee": 150.0,
+        "working_hours": {},
+        "is_verified": False,
+        "average_rating": 4.5,
+        "review_count": 10,
+        "availability_status": "available",
+        "bio": "Test bio",
+        "languages": ["English"],
+        "created_at": datetime.utcnow(),
+        "updated_at": datetime.utcnow(),
+        "is_active": True,
+    }
+
+
+@pytest.fixture
+def sample_registration_data():
+    """Sample doctor registration request data."""
+    from datetime import datetime, timedelta
+    from app.schemas.doctors import DoctorRegistrationRequest
+
+    return DoctorRegistrationRequest(
+        license_number="DOC123456",
+        license_expiry=datetime.utcnow() + timedelta(days=365),
+        specialization=[{"specialization_name": "Cardiology", "expertise_level": "expert"}],
+        qualifications=[{"degree": "MD", "institution": "Harvard Medical School", "year": 2010, "field": "Cardiology"}],
+        clinic_address="123 Medical Plaza, Boston, MA 02101",
+        clinic_phone="617-555-0123",
+        consultation_fee=150.0,
+        working_hours={
+            "Monday": {"start": "09:00", "end": "17:00"},
+            "Tuesday": {"start": "09:00", "end": "17:00"},
+            "Wednesday": {"start": "09:00", "end": "17:00"},
+            "Thursday": {"start": "09:00", "end": "17:00"},
+            "Friday": {"start": "09:00", "end": "17:00"},
+        },
+        bio="Experienced cardiologist",
+        languages=["English", "Spanish"],
+        license_document_url="https://example.com/license.pdf",
+    )
+
+
+@pytest.fixture
+def mock_jwt_token():
+    """Valid JWT token for testing."""
+    from app.core.security import create_access_token
+
+    return create_access_token(data={"sub": "test_user_id", "email": "doctor@example.com", "role": "doctor"})
+
+
+@pytest.fixture
+def mock_doctor_jwt_token():
+    """Valid doctor JWT token for testing."""
+    from app.core.security import create_access_token
+    from bson import ObjectId
+
+    return create_access_token(data={"sub": str(ObjectId()), "email": "doctor@example.com", "role": "doctor"})
+
+
+@pytest.fixture
+def mock_admin_jwt_token():
+    """Valid admin JWT token for testing."""
+    from app.core.security import create_access_token
+
+    return create_access_token(data={"sub": "admin_user_id", "email": "admin@doctorapp.com", "role": "admin"})

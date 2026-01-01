@@ -13,7 +13,7 @@ interface AuthService {
   isAuthenticated: () => boolean;
 }
 
-const mockAuthService: AuthService = {
+const createMockAuthService = (): AuthService => ({
   login: vi.fn(async (email: string, password: string) => {
     if (email === 'test@example.com' && password === 'password') {
       return {
@@ -32,12 +32,14 @@ const mockAuthService: AuthService = {
   isAuthenticated: vi.fn(() => {
     return !!localStorage.getItem('token');
   }),
-};
+});
 
 describe('Authentication Service', () => {
+  let mockAuthService: AuthService;
+
   beforeEach(() => {
     localStorage.clear();
-    vi.clearAllMocks();
+    mockAuthService = createMockAuthService();
   });
 
   it('should login with valid credentials', async () => {
