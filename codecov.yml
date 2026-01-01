@@ -1,0 +1,47 @@
+coverage:
+  status:
+    project:
+      default:
+        target: 75%
+        threshold: 1%
+        base: auto
+    patch:
+      default:
+        target: 80%
+        threshold: 1%
+
+  precision: 2
+  round: down
+  range: 70...100
+
+  flags:
+    backend:
+      paths:
+        - backend/
+      target: 80%
+      threshold: 1%
+    frontend:
+      paths:
+        - frontend/src/
+      target: 70%
+      threshold: 1%
+
+comment:
+  layout: "reach,diff,flags,tree"
+  behavior: default
+  require_changes: false
+  require_base: false
+  require_head: true
+
+ignore:
+  - "**/__tests__/**"
+  - "**/*.test.ts"
+  - "**/*.test.tsx"
+  - "**/*.spec.ts"
+  - "**/*.spec.tsx"
+  - "**/test_*.py"
+  - "**/conftest.py"
+  - "**/migrations/**"
+  - "**/node_modules/**"
+  - "**/venv/**"
+  - "**/.venv/**"
