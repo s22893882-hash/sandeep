@@ -73,10 +73,9 @@ class TestAuthEndpoints:
         )
         assert response.status_code == 422
 
-    async def test_verify_otp_success(self, client: AsyncClient, test_user):
+    async def test_verify_otp_success(self, client: AsyncClient, db, test_user):
         """Test successful OTP verification."""
         # Get OTP from database
-        db = get_database()
         otp_record = await db.otps.find_one({"email": test_user["email"]})
         otp_code = otp_record["otp_code"]
 
@@ -186,7 +185,11 @@ class TestAuthEndpoints:
         import json
 
         # Create token and manually modify exp
-        token_data = {"sub": verified_user["user_id"], "email": verified_user["email"]}
+        token_data = {
+            "sub": verified_user["user_id"],
+            "email": verified_user["email"],
+            "user_type": verified_user["user_type"],
+        }
         expired_token = create_refresh_token(token_data)
 
         response = await client.post(

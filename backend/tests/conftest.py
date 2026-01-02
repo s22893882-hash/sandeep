@@ -23,6 +23,9 @@ class MockAsyncDatabase:
         collection = self.db[name]
         return MockAsyncCollection(collection)
 
+    def __getattr__(self, name):
+        return self[name]
+
     async def drop_database(self, name):
         self.client.drop_database(name)
 
@@ -89,14 +92,6 @@ def mock_db():
     db.rollback = AsyncMock()
     db.close = AsyncMock()
     return db
-
-
-@pytest.fixture
-def event_loop():
-    """Create an event loop for the test session."""
-    loop = asyncio.get_event_loop_policy().new_event_loop()
-    yield loop
-    loop.close()
 
 
 @pytest.fixture(scope="session")
@@ -228,7 +223,7 @@ async def auth_headers(verified_user, db):
     }
     access_token = create_access_token(token_data)
 
-    return {"Authorization": f"Bearer {access_token}", "db": db}
+    return {"Authorization": f"Bearer {access_token}"}
 
 
 @pytest.fixture

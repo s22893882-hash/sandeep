@@ -10,7 +10,7 @@ from bson import ObjectId
 class TestProfileEndpoints:
     """Test profile management endpoints."""
 
-    async def test_get_profile_success(self, client: AsyncClient, auth_headers: dict, test_user: dict):
+    async def test_get_profile_success(self, client: AsyncClient, auth_headers: dict, verified_user: dict):
         """Test successful profile retrieval."""
         response = await client.get(
             "/api/users/profile",
@@ -18,9 +18,9 @@ class TestProfileEndpoints:
         )
         assert response.status_code == 200
         data = response.json()
-        assert data["user_id"] == test_user["user_id"]
-        assert data["email"] == test_user["email"]
-        assert data["full_name"] == test_user["full_name"]
+        assert data["user_id"] == verified_user["user_id"]
+        assert data["email"] == verified_user["email"]
+        assert data["full_name"] == verified_user["full_name"]
 
     async def test_get_profile_no_auth(self, client: AsyncClient):
         """Test profile retrieval without authentication."""
@@ -147,7 +147,8 @@ class TestProfileEndpoints:
 
     async def test_delete_account_success(self, client: AsyncClient, auth_headers: dict, test_user: dict):
         """Test successful account deletion."""
-        response = await client.delete(
+        response = await client.request(
+            "DELETE",
             "/api/users/account",
             json={"password": "TestPassword123!"},
             headers=auth_headers,
@@ -165,7 +166,8 @@ class TestProfileEndpoints:
 
     async def test_delete_account_wrong_password(self, client: AsyncClient, auth_headers: dict):
         """Test account deletion with wrong password."""
-        response = await client.delete(
+        response = await client.request(
+            "DELETE",
             "/api/users/account",
             json={"password": "WrongPassword123!"},
             headers=auth_headers,
@@ -175,7 +177,8 @@ class TestProfileEndpoints:
 
     async def test_delete_account_no_auth(self, client: AsyncClient):
         """Test account deletion without authentication."""
-        response = await client.delete(
+        response = await client.request(
+            "DELETE",
             "/api/users/account",
             json={"password": "TestPassword123!"},
         )

@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import Optional
 
 from bson import ObjectId
+from fastapi import Depends
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.database import get_database
@@ -158,9 +159,6 @@ class AuthService:
         return user
 
 
-auth_service = AuthService()
-
-
-def get_auth_service() -> AuthService:
+def get_auth_service(db: AsyncIOMotorDatabase = Depends(get_database)) -> AuthService:
     """Get auth service instance."""
-    return auth_service
+    return AuthService(db)

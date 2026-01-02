@@ -13,9 +13,9 @@ from app.models.user import UserUpdate
 class TestUserService:
     """Test user service methods."""
 
-    async def test_get_user_profile_success(self, test_user):
+    async def test_get_user_profile_success(self, db, test_user):
         """Test successful profile retrieval."""
-        service = UserService()
+        service = UserService(db)
 
         profile = await service.get_user_profile(test_user["user_id"])
 
@@ -23,33 +23,33 @@ class TestUserService:
         assert profile["email"] == test_user["email"]
         assert profile["full_name"] == test_user["full_name"]
 
-    async def test_get_user_profile_invalid_id(self):
+    async def test_get_user_profile_invalid_id(self, db):
         """Test get_user_profile with invalid ID."""
-        service = UserService()
+        service = UserService(db)
 
-        with pytest.raises(ValueError, match="User not found"):
+        with pytest.raises(ValueError, match="Invalid user ID"):
             await service.get_user_profile("invalid_id")
 
-    async def test_update_user_profile_full_name(self, test_user):
+    async def test_update_user_profile_full_name(self, db, test_user):
         """Test updating user full name."""
-        service = UserService()
+        service = UserService(db)
 
         profile = await service.update_user_profile(test_user["user_id"], UserUpdate(full_name="Updated Name"))
 
         assert profile["full_name"] == "Updated Name"
         assert profile["user_id"] == test_user["user_id"]
 
-    async def test_update_user_profile_phone_number(self, test_user):
+    async def test_update_user_profile_phone_number(self, db, test_user):
         """Test updating user phone number."""
-        service = UserService()
+        service = UserService(db)
 
         profile = await service.update_user_profile(test_user["user_id"], UserUpdate(phone_number="+1987654321"))
 
         assert profile["phone_number"] == "+1987654321"
 
-    async def test_update_user_profile_address(self, test_user):
+    async def test_update_user_profile_address(self, db, test_user):
         """Test updating user address."""
-        service = UserService()
+        service = UserService(db)
 
         profile = await service.update_user_profile(
             test_user["user_id"],
@@ -58,9 +58,9 @@ class TestUserService:
 
         assert profile["address"] == "123 New Street, City, Country"
 
-    async def test_update_user_profile_multiple_fields(self, test_user):
+    async def test_update_user_profile_multiple_fields(self, db, test_user):
         """Test updating multiple profile fields."""
-        service = UserService()
+        service = UserService(db)
 
         profile = await service.update_user_profile(
             test_user["user_id"],
@@ -75,32 +75,32 @@ class TestUserService:
         assert profile["phone_number"] == "+1555123456"
         assert profile["address"] == "456 Updated Ave"
 
-    async def test_update_user_profile_invalid_id(self):
+    async def test_update_user_profile_invalid_id(self, db):
         """Test update_user_profile with invalid ID."""
-        service = UserService()
+        service = UserService(db)
 
-        with pytest.raises(ValueError, match="User not found"):
+        with pytest.raises(ValueError, match="Invalid user ID"):
             await service.update_user_profile("invalid_id", UserUpdate(full_name="Test"))
 
-    async def test_update_profile_photo(self, test_user):
+    async def test_update_profile_photo(self, db, test_user):
         """Test updating profile photo."""
-        service = UserService()
+        service = UserService(db)
 
         result = await service.update_profile_photo(test_user["user_id"], "/api/static/photo.jpg")
 
         assert result["photo_url"] == "/api/static/photo.jpg"
         assert result["upload_status"] == "success"
 
-    async def test_update_profile_photo_invalid_id(self):
+    async def test_update_profile_photo_invalid_id(self, db):
         """Test update_profile_photo with invalid ID."""
-        service = UserService()
+        service = UserService(db)
 
-        with pytest.raises(ValueError, match="User not found"):
+        with pytest.raises(ValueError, match="Invalid user ID"):
             await service.update_profile_photo("invalid_id", "/api/static/photo.jpg")
 
-    async def test_soft_delete_user_success(self, test_user):
+    async def test_soft_delete_user_success(self, db, test_user):
         """Test successful soft delete of user."""
-        service = UserService()
+        service = UserService(db)
 
         result = await service.soft_delete_user(test_user["user_id"], "TestPassword123!")
 
@@ -113,16 +113,16 @@ class TestUserService:
             assert user["deleted_at"] is not None
             assert user["is_active"] is False
 
-    async def test_soft_delete_user_wrong_password(self, test_user):
+    async def test_soft_delete_user_wrong_password(self, db, test_user):
         """Test soft delete with wrong password."""
-        service = UserService()
+        service = UserService(db)
 
         with pytest.raises(ValueError, match="Invalid password"):
             await service.soft_delete_user(test_user["user_id"], "WrongPassword!")
 
-    async def test_soft_delete_user_invalid_id(self):
+    async def test_soft_delete_user_invalid_id(self, db):
         """Test soft delete with invalid user ID."""
-        service = UserService()
+        service = UserService(db)
 
-        with pytest.raises(ValueError, match="User not found"):
+        with pytest.raises(ValueError, match="Invalid user ID"):
             await service.soft_delete_user("invalid_id", "TestPassword123!")

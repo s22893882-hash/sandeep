@@ -62,8 +62,19 @@ async def get_profile(
     user_service: UserService = Depends(get_user_service),
 ):
     """Get authenticated user's profile."""
-    profile = await user_service.get_user_profile(user_id)
-    return profile
+    try:
+        profile = await user_service.get_user_profile(user_id)
+        return profile
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e),
+        ) from e
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve profile",
+        ) from e
 
 
 @router.put("/profile", response_model=UserResponse, status_code=status.HTTP_200_OK)
@@ -73,8 +84,19 @@ async def update_profile(
     user_service: UserService = Depends(get_user_service),
 ):
     """Update authenticated user's profile."""
-    profile = await user_service.update_user_profile(user_id, profile_data)
-    return profile
+    try:
+        profile = await user_service.update_user_profile(user_id, profile_data)
+        return profile
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        ) from e
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update profile",
+        ) from e
 
 
 @router.put("/profile/photo", status_code=status.HTTP_200_OK)
@@ -121,5 +143,16 @@ async def delete_account(
     user_service: UserService = Depends(get_user_service),
 ):
     """Delete authenticated user's account."""
-    result = await user_service.soft_delete_user(user_id, deletion_data.password)
-    return result
+    try:
+        result = await user_service.soft_delete_user(user_id, deletion_data.password)
+        return result
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        ) from e
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to delete account",
+        ) from e

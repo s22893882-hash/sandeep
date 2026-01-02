@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
+from app.config import get_settings
 from app.models.otp import OTPVerifyRequest, OTPVerifyResponse
 from app.models.user import (
     RefreshTokenRequest,
@@ -16,8 +17,9 @@ from app.models.user import (
 )
 from app.services.auth_service import AuthService, get_auth_service
 
+settings = get_settings()
 router = APIRouter(prefix="/api/users", tags=["Authentication"])
-limiter = Limiter(key_func=get_remote_address)
+limiter = Limiter(key_func=get_remote_address, enabled=settings.environment != "test")
 
 
 @router.post(

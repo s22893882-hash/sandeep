@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
+from app.config import get_settings
 from app.models.password_reset import (
     PasswordResetConfirmRequest,
     PasswordResetConfirmResponse,
@@ -20,8 +21,9 @@ from app.services.email_service import get_email_service
 from app.utils.otp import generate_otp, get_otp_expiry, is_otp_expired
 from app.utils.password import hash_password
 
+settings = get_settings()
 router = APIRouter(prefix="/api/users", tags=["Password"])
-limiter = Limiter(key_func=get_remote_address)
+limiter = Limiter(key_func=get_remote_address, enabled=settings.environment != "test")
 
 
 @router.post("/password-reset-request", response_model=PasswordResetRequestResponse)

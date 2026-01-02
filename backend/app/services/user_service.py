@@ -4,6 +4,7 @@ User service for profile management.
 from datetime import datetime
 
 from bson import ObjectId
+from fastapi import Depends
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from pymongo import ReturnDocument
 
@@ -144,9 +145,6 @@ class UserService:
             raise ValueError("Invalid user ID")
 
 
-user_service = UserService()
-
-
-def get_user_service() -> UserService:
+def get_user_service(db: AsyncIOMotorDatabase = Depends(get_database)) -> UserService:
     """Get user service instance."""
-    return user_service
+    return UserService(db)
