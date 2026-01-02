@@ -79,15 +79,15 @@ def mock_stripe():
     with patch("stripe.Customer") as mock_customer, \
          patch("stripe.PaymentIntent") as mock_payment, \
          patch("stripe.Subscription") as mock_subscription:
-        
+
         mock_customer.create = Mock(return_value={"id": "cus_test123"})
         mock_customer.retrieve = Mock(return_value={"id": "cus_test123", "email": "test@example.com"})
-        
+
         mock_payment.create = Mock(return_value={"id": "pi_test123", "status": "succeeded"})
         mock_payment.retrieve = Mock(return_value={"id": "pi_test123", "status": "succeeded"})
-        
+
         mock_subscription.create = Mock(return_value={"id": "sub_test123", "status": "active"})
-        
+
         yield {
             "customer": mock_customer,
             "payment": mock_payment,
@@ -175,3 +175,100 @@ def mock_paypal():
         payment.state = "approved"
         mock.return_value = payment
         yield payment
+
+
+# MongoDB fixtures for patient management testing
+
+
+@pytest.fixture
+def mock_mongo_database():
+    """Mock MongoDB database connection."""
+    db = Mock()
+    db.patients = Mock()
+    db.medical_history = Mock()
+    db.allergies = Mock()
+    db.insurance = Mock()
+    db.create_index = AsyncMock()
+    db.create_indexes = AsyncMock()
+    return db
+
+
+@pytest.fixture
+def test_patient_user():
+    """Create a test patient user fixture."""
+    return {
+        "user_id": "patient123",
+        "email": "patient@example.com",
+        "role": "patient",
+    }
+
+
+@pytest.fixture
+def mock_patient_data():
+    """Create mock patient data."""
+    from datetime import datetime
+    return {
+        "_id": "507f1f77bcf86cd799439011",
+        "patient_id": "PT20240101120000001",
+        "user_id": "patient123",
+        "full_name": "John Doe",
+        "date_of_birth": "1990-01-01",
+        "gender": "male",
+        "blood_type": "O+",
+        "height_cm": 175.0,
+        "weight_kg": 70.0,
+        "emergency_contact_name": "Jane Doe",
+        "emergency_contact_phone": "1234567890",
+        "created_at": datetime.utcnow(),
+        "updated_at": datetime.utcnow(),
+        "is_active": True,
+    }
+
+
+@pytest.fixture
+def mock_medical_history_data():
+    """Create mock medical history data."""
+    from datetime import datetime
+    return {
+        "_id": "507f1f77bcf86cd799439012",
+        "history_id": "MH20240101120000001",
+        "patient_id": "PT20240101120000001",
+        "condition_name": "Diabetes Type 2",
+        "diagnosis_date": "2020-01-01",
+        "status": "active",
+        "treatment_notes": "Metformin 500mg twice daily",
+        "created_at": datetime.utcnow(),
+        "updated_at": datetime.utcnow(),
+    }
+
+
+@pytest.fixture
+def mock_allergy_data():
+    """Create mock allergy data."""
+    from datetime import datetime
+    return {
+        "_id": "507f1f77bcf86cd799439013",
+        "allergy_id": "AL20240101120000001",
+        "patient_id": "PT20240101120000001",
+        "allergy_name": "Penicillin",
+        "severity": "severe",
+        "reaction_description": "Anaphylactic reaction",
+        "created_at": datetime.utcnow(),
+    }
+
+
+@pytest.fixture
+def mock_insurance_data():
+    """Create mock insurance data."""
+    from datetime import datetime, timedelta
+    return {
+        "_id": "507f1f77bcf86cd799439014",
+        "insurance_id": "IN20240101120000001",
+        "patient_id": "PT20240101120000001",
+        "provider_name": "BlueCross BlueShield",
+        "policy_number": "BCB123456789",
+        "coverage_type": "premium",
+        "expiry_date": (datetime.utcnow() + timedelta(days=365)).isoformat(),
+        "created_at": datetime.utcnow(),
+        "updated_at": datetime.utcnow(),
+    }

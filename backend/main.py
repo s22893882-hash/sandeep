@@ -1,10 +1,31 @@
 """
-Simple FastAPI application for demonstration.
+Federated Health AI Platform - Backend API
 """
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI(title="Backend API")
+from app.database import db, ensure_indexes
+from app.routers import patients_router
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Application lifespan manager."""
+    # Startup
+    await db.connect()
+    await ensure_indexes(db.get_db())
+    yield
+    # Shutdown
+    await db.disconnect()
+
+
+app = FastAPI(
+    title="Federated Health AI Platform API",
+    description="Backend API for the Federated Health AI Platform",
+    version="1.0.0",
+    lifespan=lifespan,
+)
 
 # Restricted CORS origins
 origins = [
@@ -19,6 +40,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include routers
+app.include_router(patients_router)
 
 
 @app.get("/health")
