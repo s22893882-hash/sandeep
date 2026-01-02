@@ -5,6 +5,8 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    security_opt:
+      - no-new-privileges:true
     ports:
       - "8000:8000"
     environment:
@@ -15,7 +17,9 @@ services:
       - db
       - redis
     volumes:
-      - ./backend:/app
+      - ./backend:/app:ro
+    tmpfs:
+      - /tmp
     networks:
       - app-network
 
@@ -23,15 +27,24 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
     ports:
       - "3000:80"
     depends_on:
       - backend
     networks:
       - app-network
+    tmpfs:
+      - /var/cache/nginx
+      - /var/run
+      - /tmp
 
   db:
     image: postgres:15-alpine
+    security_opt:
+      - no-new-privileges:true
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
@@ -40,15 +53,22 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    tmpfs:
+      - /run/postgresql:mode=1777
+      - /tmp
     networks:
       - app-network
 
   redis:
     image: redis:7-alpine
+    security_opt:
+      - no-new-privileges:true
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
+    tmpfs:
+      - /tmp
     networks:
       - app-network
 
