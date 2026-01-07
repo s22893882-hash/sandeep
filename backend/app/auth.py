@@ -48,7 +48,7 @@ def decode_token(token: str) -> Dict[str, Any]:
 
 
 async def get_current_user(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+    credentials: HTTPAuthorizationCredentials = Depends(security),
 ) -> Dict[str, Any]:
     """Get current authenticated user from JWT token."""
     # In testing mode, allow bypass with test credentials

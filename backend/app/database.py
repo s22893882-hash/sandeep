@@ -20,6 +20,20 @@ def generate_id(prefix: str = "") -> str:
     return f"{prefix}_{unique_id}" if prefix else unique_id
 
 
+def format_mongo_doc(doc: dict) -> dict:
+    """Format a MongoDB document for JSON response."""
+    if not doc:
+        return doc
+    if "_id" in doc:
+        doc["_id"] = str(doc["_id"])
+    return doc
+
+
+def format_mongo_docs(docs: list) -> list:
+    """Format a list of MongoDB documents for JSON response."""
+    return [format_mongo_doc(doc) for doc in docs]
+
+
 async def connect_to_mongo():
     """Connect to MongoDB."""
     global client, database

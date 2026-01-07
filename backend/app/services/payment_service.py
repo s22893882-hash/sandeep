@@ -8,7 +8,7 @@ from app.models.payment import (
     PaymentStatus,
     InvoiceStatus,
 )
-from app.database import generate_id
+from app.database import generate_id, format_mongo_doc, format_mongo_docs
 
 
 class PaymentService:
@@ -34,7 +34,7 @@ class PaymentService:
             "updated_at": datetime.utcnow(),
         }
         await self.db.payments.insert_one(payment_doc)
-        return payment_doc
+        return format_mongo_doc(payment_doc)
 
     async def process_payment(self, payment_id: str) -> Dict[str, Any]:
         """Process payment (Stripe/Razorpay mock)."""

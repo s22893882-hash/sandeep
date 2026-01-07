@@ -1,6 +1,5 @@
 """Analytics and reporting API endpoints."""
 from fastapi import APIRouter, Depends, HTTPException, status
-from typing import List
 
 from app.auth import get_current_admin
 from app.services.analytics_service import AnalyticsService

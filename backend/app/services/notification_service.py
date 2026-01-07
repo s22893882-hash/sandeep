@@ -3,7 +3,7 @@ from typing import List, Dict, Any
 from datetime import datetime
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
-from app.database import generate_id
+from app.database import generate_id, format_mongo_doc, format_mongo_docs
 
 
 class NotificationService:
@@ -31,7 +31,7 @@ class NotificationService:
 
         # Here we would also trigger email/SMS/Push via external services
 
-        return notification_doc
+        return format_mongo_doc(notification_doc)
 
     async def get_preferences(self, user_id: str) -> Dict[str, Any]:
         """Get notification preferences."""
@@ -43,7 +43,7 @@ class NotificationService:
                 "channel_preferences": {"email": True, "sms": False, "push": True, "in_app": True},
                 "opt_out_categories": [],
             }
-        return prefs
+        return format_mongo_doc(prefs)
 
     async def update_preferences(self, user_id: str, prefs_data: Dict[str, Any]) -> Dict[str, Any]:
         """Update preferences."""
@@ -53,7 +53,8 @@ class NotificationService:
     async def get_inbox(self, user_id: str) -> List[Dict[str, Any]]:
         """Get notification inbox."""
         cursor = self.db.notifications.find({"user_id": user_id}).sort("created_at", -1)
-        return await cursor.to_list(length=None)
+        docs = await cursor.to_list(length=None)
+        return format_mongo_docs(docs)
 
     async def mark_as_read(self, notification_id: str) -> Dict[str, Any]:
         """Mark as read."""

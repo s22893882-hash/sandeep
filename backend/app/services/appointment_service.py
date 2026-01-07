@@ -8,7 +8,7 @@ from app.models.appointment import (
     AppointmentUpdate,
     AppointmentStatus,
 )
-from app.database import generate_id
+from app.database import generate_id, format_mongo_doc, format_mongo_docs
 
 
 class AppointmentService:
@@ -20,7 +20,8 @@ class AppointmentService:
     async def get_doctor_availability(self, doctor_id: str, date: str) -> List[Dict[str, Any]]:
         """Get doctor's available slots for a specific date."""
         cursor = self.db.appointment_slots.find({"doctor_id": doctor_id, "date": date, "available": True})
-        return await cursor.to_list(length=None)
+        docs = await cursor.to_list(length=None)
+        return format_mongo_docs(docs)
 
     async def book_appointment(self, appointment_data: AppointmentCreate) -> Dict[str, Any]:
         """Book a new appointment."""
@@ -59,17 +60,19 @@ class AppointmentService:
             {"_id": slot["_id"]}, {"$set": {"available": False, "booked_by": appointment_data.patient_id}}
         )
 
-        return appointment_doc
+        return format_mongo_doc(appointment_doc)
 
     async def get_patient_appointments(self, patient_id: str) -> List[Dict[str, Any]]:
         """Retrieve patient's appointments."""
         cursor = self.db.appointments.find({"patient_id": patient_id}).sort("appointment_date", -1)
-        return await cursor.to_list(length=None)
+        docs = await cursor.to_list(length=None)
+        return format_mongo_docs(docs)
 
     async def get_doctor_schedule(self, doctor_id: str) -> List[Dict[str, Any]]:
         """Retrieve doctor's appointment schedule."""
         cursor = self.db.appointments.find({"doctor_id": doctor_id}).sort("appointment_date", 1)
-        return await cursor.to_list(length=None)
+        docs = await cursor.to_list(length=None)
+        return format_mongo_docs(docs)
 
     async def reschedule_appointment(self, appointment_id: str, update_data: AppointmentUpdate) -> Dict[str, Any]:
         """Reschedule an existing appointment."""

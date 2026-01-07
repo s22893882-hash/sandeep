@@ -3,7 +3,7 @@ from typing import List, Dict, Any
 from datetime import datetime, timedelta
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
-from app.database import generate_id
+from app.database import generate_id, format_mongo_doc
 
 
 class AnalyticsService:
@@ -108,14 +108,14 @@ class AnalyticsService:
             "status": "completed",
         }
         await self.db.reports.insert_one(report_doc)
-        return report_doc
+        return format_mongo_doc(report_doc)
 
     async def get_report(self, report_id: str) -> Dict[str, Any]:
         """Retrieve generated report."""
         report = await self.db.reports.find_one({"report_id": report_id})
         if not report:
             raise ValueError("Report not found")
-        return report
+        return format_mongo_doc(report)
 
     async def get_real_time_dashboard(self) -> Dict[str, Any]:
         """Real-time metrics."""

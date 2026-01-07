@@ -1,10 +1,10 @@
 """Search and recommendations business logic."""
-from typing import Optional, List, Dict, Any
+from typing import List, Dict, Any
 from datetime import datetime
 from motor.motor_asyncio import AsyncIOMotorDatabase
 import re
 
-from app.database import generate_id
+from app.database import generate_id, format_mongo_doc, format_mongo_docs
 
 
 class SearchService:
@@ -31,18 +31,21 @@ class SearchService:
                 search_filter["rating"] = {"$gte": filters["rating"]}
 
         cursor = self.db.doctors.find(search_filter)
-        return await cursor.to_list(length=None)
+        docs = await cursor.to_list(length=None)
+        return format_mongo_docs(docs)
 
     async def find_nearby_doctors(self, lat: float, lng: float, radius_km: float = 10) -> List[Dict[str, Any]]:
         """Find doctors by location."""
         # Mock geospatial search
         cursor = self.db.doctors.find({})  # In reality, use $near
-        return await cursor.to_list(length=10)
+        docs = await cursor.to_list(length=10)
+        return format_mongo_docs(docs)
 
     async def search_by_specialization(self, specialization: str) -> List[Dict[str, Any]]:
         """Search by specialization."""
         cursor = self.db.doctors.find({"specialization": specialization})
-        return await cursor.to_list(length=None)
+        docs = await cursor.to_list(length=None)
+        return format_mongo_docs(docs)
 
     async def get_multi_filter_search(self, filters: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Multi-filter search."""
@@ -57,16 +60,19 @@ class SearchService:
         if not history:
             # Default recommendations
             cursor = self.db.doctors.find({}).sort("rating", -1).limit(5)
-            return await cursor.to_list(length=None)
+            docs = await cursor.to_list(length=None)
+            return format_mongo_docs(docs)
 
         # Mock recommendation logic
         cursor = self.db.doctors.find({}).limit(5)
-        return await cursor.to_list(length=None)
+        docs = await cursor.to_list(length=None)
+        return format_mongo_docs(docs)
 
     async def get_trending_doctors(self) -> List[Dict[str, Any]]:
         """Trending doctors/services."""
         cursor = self.db.doctors.find({}).sort("rating", -1).limit(5)
-        return await cursor.to_list(length=None)
+        docs = await cursor.to_list(length=None)
+        return format_mongo_docs(docs)
 
     async def save_search_criteria(self, user_id: str, name: str, filters: Dict[str, Any]) -> Dict[str, Any]:
         """Save search criteria."""
@@ -79,18 +85,19 @@ class SearchService:
             "created_date": datetime.utcnow(),
         }
         await self.db.saved_search_criteria.insert_one(doc)
-        return doc
+        return format_mongo_doc(doc)
 
     async def get_saved_criteria(self, user_id: str) -> List[Dict[str, Any]]:
         """Retrieve saved searches."""
         cursor = self.db.saved_search_criteria.find({"user_id": user_id})
-        return await cursor.to_list(length=None)
+        docs = await cursor.to_list(length=None)
+        return format_mongo_docs(docs)
 
     async def autocomplete(self, query: str) -> List[str]:
         """Search autocomplete."""
         if not query:
             return []
-        regex = re.compile(f"^{query}", re.IGNORECASE)
+        regex = re.compile(query, re.IGNORECASE)
         # Combine results from specializations and doctor names
         names_cursor = self.db.doctors.find({"full_name": regex}, {"full_name": 1}).limit(5)
         specs_cursor = self.db.doctors.find({"specialization": regex}, {"specialization": 1}).limit(5)

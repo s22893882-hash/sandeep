@@ -7,7 +7,7 @@ from app.models.consultation import (
     ConsultationCreate,
     ConsultationStatus,
 )
-from app.database import generate_id
+from app.database import generate_id, format_mongo_doc, format_mongo_docs
 
 
 class ConsultationService:
@@ -31,14 +31,14 @@ class ConsultationService:
             "updated_at": now,
         }
         await self.db.consultations.insert_one(consultation_doc)
-        return consultation_doc
+        return format_mongo_doc(consultation_doc)
 
     async def get_consultation(self, consultation_id: str) -> Dict[str, Any]:
         """Get consultation details."""
         consultation = await self.db.consultations.find_one({"consultation_id": consultation_id})
         if not consultation:
             raise ValueError("Consultation not found")
-        return consultation
+        return format_mongo_doc(consultation)
 
     async def send_message(self, consultation_id: str, sender_id: str, message: str, msg_type: str = "text") -> Dict[str, Any]:
         """Send a consultation message."""
@@ -52,12 +52,13 @@ class ConsultationService:
             "type": msg_type,
         }
         await self.db.consultation_messages.insert_one(message_doc)
-        return message_doc
+        return format_mongo_doc(message_doc)
 
     async def get_messages(self, consultation_id: str) -> List[Dict[str, Any]]:
         """Get consultation chat history."""
         cursor = self.db.consultation_messages.find({"consultation_id": consultation_id}).sort("timestamp", 1)
-        return await cursor.to_list(length=None)
+        docs = await cursor.to_list(length=None)
+        return format_mongo_docs(docs)
 
     async def add_prescription(
         self, consultation_id: str, doctor_id: str, patient_id: str, medications: List[dict]

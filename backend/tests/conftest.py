@@ -281,7 +281,7 @@ def auth_token():
 @pytest.fixture
 def mock_jwt_decode():
     """Mock JWT decode function."""
-    with patch("jwt.decode") as mock:
+    with patch("jose.jwt.decode") as mock:
         mock.return_value = {
             "sub": "1",
             "email": "test@example.com",
