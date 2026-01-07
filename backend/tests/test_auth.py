@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+import jwt
 import pytest
 
 
@@ -33,12 +34,11 @@ def test_jwt_token_generation(test_user):
 
 
 @pytest.mark.unit
-def test_jwt_token_validation(auth_token, _mock_jwt_decode):
+@pytest.mark.usefixtures("mock_jwt_decode")
+def test_jwt_token_validation(auth_token):
     """Test JWT token validation."""
 
     def validate_token(token: str) -> dict:
-        import jwt
-
         return jwt.decode(token, "secret", algorithms=["HS256"])
 
     decoded = validate_token(auth_token)
@@ -102,7 +102,8 @@ def test_token_expiration():
 
 
 @pytest.mark.auth
-async def test_password_reset_flow(mock_db, _mock_email_service):
+@pytest.mark.usefixtures("mock_email_service")
+async def test_password_reset_flow(mock_db):
     """Test password reset flow."""
 
     async def request_password_reset(email: str, db):

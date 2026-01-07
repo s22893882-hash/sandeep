@@ -3,6 +3,8 @@ Tests for authentication endpoints.
 """
 import pytest
 from httpx import AsyncClient
+from app.utils.jwt import create_refresh_token
+from app.routers.auth import limiter
 
 
 @pytest.mark.asyncio
@@ -175,7 +177,6 @@ class TestAuthEndpoints:
     async def test_refresh_token_expired(self, client: AsyncClient, verified_user):
         """Test refresh token with expired token."""
         # Create an expired refresh token
-        from app.utils.jwt import create_refresh_token
 
         # Create token and manually modify exp
         token_data = {
@@ -195,7 +196,6 @@ class TestAuthEndpoints:
 
     async def test_login_rate_limiting(self, client: AsyncClient, verified_user):
         """Test login rate limiting."""
-        from app.routers.auth import limiter
 
         original_enabled = limiter.enabled
         limiter.enabled = True
