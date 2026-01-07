@@ -14,7 +14,7 @@ passlib[bcrypt]==1.7.4
 bcrypt==3.2.2
 python-multipart==0.0.18
 aiofiles==23.2.1
-boto3==1.29.7
+boto3==1.42.23
 stripe==7.7.0
 requests==2.32.4
 httpx==0.25.2
