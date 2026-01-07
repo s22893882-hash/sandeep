@@ -1,11 +1,13 @@
-import os
-import pytest
-from typing import Generator, AsyncGenerator
-from unittest.mock import Mock, AsyncMock, patch
 import asyncio
-from httpx import AsyncClient, ASGITransport
+import os
+from datetime import datetime, timedelta
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
+
+import pytest
+from httpx import ASGITransport, AsyncClient
 from mongomock import MongoClient
-from datetime import datetime
+
+# pylint: disable=redefined-outer-name,import-outside-toplevel
 
 os.environ["ENVIRONMENT"] = "test"
 os.environ["MONGODB_URL"] = "mongodb://localhost:27017"
@@ -189,6 +191,19 @@ async def verified_user(db):
 
 
 @pytest.fixture
+def mock_database():
+    """Mock MongoDB database for testing."""
+    db = Mock()
+    db.patients = Mock()
+    db.medical_history = Mock()
+    db.allergies = Mock()
+    db.insurance = Mock()
+    db.create_index = AsyncMock()
+    db.create_indexes = AsyncMock()
+    return db
+
+
+@pytest.fixture
 async def client(db):
     """Create test HTTP client."""
     # Import app here to avoid circular imports
@@ -212,7 +227,82 @@ async def client(db):
 
 
 @pytest.fixture
-async def auth_headers(verified_user, db):
+def mock_patient_record():
+    """Create a mock patient record."""
+    from bson import ObjectId
+
+    return {
+        "_id": ObjectId(),
+        "patient_id": "PT20240101120000001",
+        "user_id": "user123",
+        "full_name": "John Doe",
+        "date_of_birth": "1990-01-01",
+        "gender": "male",
+        "blood_type": "O+",
+        "height_cm": 175.0,
+        "weight_kg": 70.0,
+        "emergency_contact_name": "Jane Doe",
+        "emergency_contact_phone": "1234567890",
+        "created_at": datetime.utcnow(),
+        "updated_at": datetime.utcnow(),
+        "is_active": True,
+    }
+
+
+@pytest.fixture
+def mock_medical_history_record():
+    """Create a mock medical history record."""
+    from bson import ObjectId
+
+    return {
+        "_id": ObjectId(),
+        "history_id": "MH20240101120000001",
+        "patient_id": "PT20240101120000001",
+        "condition_name": "Diabetes",
+        "diagnosis_date": "2020-01-01",
+        "status": "active",
+        "treatment_notes": "Insulin therapy",
+        "created_at": datetime.utcnow(),
+        "updated_at": datetime.utcnow(),
+    }
+
+
+@pytest.fixture
+def mock_allergy_record():
+    """Create a mock allergy record."""
+    from bson import ObjectId
+
+    return {
+        "_id": ObjectId(),
+        "allergy_id": "AL20240101120000001",
+        "patient_id": "PT20240101120000001",
+        "allergy_name": "Penicillin",
+        "severity": "severe",
+        "reaction_description": "Anaphylaxis",
+        "created_at": datetime.utcnow(),
+    }
+
+
+@pytest.fixture
+def mock_insurance_record():
+    """Create a mock insurance record."""
+    from bson import ObjectId
+
+    return {
+        "_id": ObjectId(),
+        "insurance_id": "IN20240101120000001",
+        "patient_id": "PT20240101120000001",
+        "provider_name": "BlueCross",
+        "policy_number": "BC123456",
+        "coverage_type": "premium",
+        "expiry_date": (datetime.utcnow() + timedelta(days=365)).isoformat(),
+        "created_at": datetime.utcnow(),
+        "updated_at": datetime.utcnow(),
+    }
+
+
+@pytest.fixture
+async def auth_headers(verified_user):
     """Create authorization headers for authenticated requests."""
     from app.utils.jwt import create_access_token
 
@@ -243,13 +333,17 @@ def test_admin_user():
 @pytest.fixture
 def auth_token():
     """Generate a mock JWT token."""
-    return "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+    return (
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9."
+        "eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ."
+        "SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+    )
 
 
 @pytest.fixture
 def mock_jwt_decode():
     """Mock JWT decode function."""
-    with patch("jwt.decode") as mock:
+    with patch("jose.jwt.decode") as mock:
         mock.return_value = {
             "sub": "1",
             "email": "test@example.com",
@@ -319,8 +413,6 @@ def mock_s3_client():
 @pytest.fixture
 async def test_client():
     """Create a test HTTP client."""
-    from unittest.mock import MagicMock
-
     client = MagicMock()
     client.get = AsyncMock()
     client.post = AsyncMock()
