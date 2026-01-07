@@ -3,8 +3,74 @@ import pytest
 from typing import Generator, AsyncGenerator
 from unittest.mock import Mock, AsyncMock, patch
 import asyncio
+from httpx import AsyncClient, ASGITransport
+from mongomock import MongoClient
+from datetime import datetime
 
 os.environ["ENVIRONMENT"] = "test"
+os.environ["MONGODB_URL"] = "mongodb://localhost:27017"
+os.environ["MONGODB_DB_NAME"] = "test_federated_health_ai"
+
+
+class MockAsyncDatabase:
+    """Mock async database using mongomock."""
+
+    def __init__(self, db_name):
+        self.client = MongoClient()
+        self.db = self.client[db_name]
+
+    def __getitem__(self, name):
+        collection = self.db[name]
+        return MockAsyncCollection(collection)
+
+    def __getattr__(self, name):
+        return self[name]
+
+    async def drop_database(self, name):
+        self.client.drop_database(name)
+
+    def close(self):
+        self.client.close()
+
+
+class MockAsyncCollection:
+    """Mock async collection using mongomock."""
+
+    def __init__(self, collection):
+        self.collection = collection
+
+    async def find_one(self, query=None):
+        if query:
+            return self.collection.find_one(query)
+        return None
+
+    async def find(self, query=None):
+        return self.collection.find(query or {})
+
+    async def insert_one(self, document):
+        # Remove None values from document before insert
+        clean_doc = {k: v for k, v in document.items() if v is not None}
+        result = self.collection.insert_one(clean_doc)
+        return Mock(inserted_id=str(result.inserted_id))
+
+    async def update_one(self, query, update):
+        return self.collection.update_one(query, update)
+
+    async def find_one_and_update(self, query, update, return_document=None):
+        from pymongo import ReturnDocument
+
+        if return_document == ReturnDocument.AFTER:
+            doc = self.collection.find_one(query)
+            if doc:
+                self.collection.update_one(query, update)
+                return self.collection.find_one(query)
+        return self.collection.find_one_and_update(query, update)
+
+    async def delete_one(self, query):
+        return self.collection.delete_one(query)
+
+    async def delete_many(self, query):
+        return self.collection.delete_many(query)
 
 
 @pytest.fixture(scope="session")
@@ -28,17 +94,136 @@ def mock_db():
     return db
 
 
+@pytest.fixture(scope="session")
+async def global_db():
+    """Create MongoDB test database for the session."""
+    db = MockAsyncDatabase(os.environ["MONGODB_DB_NAME"])
+
+    yield db
+
+    # Cleanup
+    await db.drop_database(os.environ["MONGODB_DB_NAME"])
+    db.close()
+
+
 @pytest.fixture
-def test_user():
-    """Create a test user fixture."""
-    return {
-        "id": 1,
+async def db(global_db):
+    """Get database for this test."""
+    # Clean up collections before each test
+    await global_db.users.delete_many({})
+    await global_db.otps.delete_many({})
+    await global_db.password_resets.delete_many({})
+    yield global_db
+
+
+@pytest.fixture
+async def test_user(db):
+    """Create a test user in database."""
+    from app.utils.password import hash_password
+
+    user_data = {
         "email": "test@example.com",
-        "username": "testuser",
+        "password_hash": hash_password("TestPassword123!"),
+        "full_name": "Test User",
+        "phone_number": "+1234567890",
+        "date_of_birth": datetime(1990, 1, 1),
+        "address": None,
+        "profile_photo_url": None,
+        "user_type": "patient",
+        "verification_status": "pending",
         "is_active": True,
-        "is_verified": True,
-        "created_at": "2024-01-01T00:00:00Z",
+        "created_at": datetime.utcnow(),
+        "updated_at": None,
+        "deleted_at": None,
     }
+
+    result = await db.users.insert_one(user_data)
+    user_id = result.inserted_id
+
+    # Generate and store OTP
+    from app.utils.otp import generate_otp, get_otp_expiry
+
+    otp_code = generate_otp()
+    await db.otps.insert_one(
+        {
+            "email": user_data["email"],
+            "otp_code": otp_code,
+            "expires_at": get_otp_expiry(),
+            "created_at": datetime.utcnow(),
+            "used": False,
+        }
+    )
+
+    # Return user dict with ID as string
+    user_data["user_id"] = str(user_id)
+    return user_data
+
+
+@pytest.fixture
+async def verified_user(db):
+    """Create a verified test user in database."""
+    from app.utils.password import hash_password
+
+    user_data = {
+        "email": "verified@example.com",
+        "password_hash": hash_password("TestPassword123!"),
+        "full_name": "Verified User",
+        "phone_number": "+1234567890",
+        "date_of_birth": datetime(1990, 1, 1),
+        "address": None,
+        "profile_photo_url": None,
+        "user_type": "patient",
+        "verification_status": "verified",
+        "is_active": True,
+        "created_at": datetime.utcnow(),
+        "updated_at": None,
+        "deleted_at": None,
+    }
+
+    result = await db.users.insert_one(user_data)
+    user_id = result.inserted_id
+
+    # Return user dict with ID as string
+    user_data["user_id"] = str(user_id)
+    return user_data
+
+
+@pytest.fixture
+async def client(db):
+    """Create test HTTP client."""
+    # Import app here to avoid circular imports
+    from app.main import app
+
+    # Initialize database
+    from app.database import get_database
+
+    # Override the database dependency
+    async def override_get_database():
+        return db
+
+    app.dependency_overrides[get_database] = override_get_database
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        yield ac
+
+    # Clean up overrides
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture
+async def auth_headers(verified_user, db):
+    """Create authorization headers for authenticated requests."""
+    from app.utils.jwt import create_access_token
+
+    token_data = {
+        "sub": verified_user["user_id"],
+        "email": verified_user["email"],
+        "user_type": verified_user["user_type"],
+    }
+    access_token = create_access_token(token_data)
+
+    return {"Authorization": f"Bearer {access_token}"}
 
 
 @pytest.fixture
@@ -76,18 +261,17 @@ def mock_jwt_decode():
 @pytest.fixture
 def mock_stripe():
     """Mock Stripe API."""
-    with patch("stripe.Customer") as mock_customer, \
-         patch("stripe.PaymentIntent") as mock_payment, \
-         patch("stripe.Subscription") as mock_subscription:
-        
+    with patch("stripe.Customer") as mock_customer, patch("stripe.PaymentIntent") as mock_payment, patch(
+        "stripe.Subscription"
+    ) as mock_subscription:
         mock_customer.create = Mock(return_value={"id": "cus_test123"})
         mock_customer.retrieve = Mock(return_value={"id": "cus_test123", "email": "test@example.com"})
-        
+
         mock_payment.create = Mock(return_value={"id": "pi_test123", "status": "succeeded"})
         mock_payment.retrieve = Mock(return_value={"id": "pi_test123", "status": "succeeded"})
-        
+
         mock_subscription.create = Mock(return_value={"id": "sub_test123", "status": "active"})
-        
+
         yield {
             "customer": mock_customer,
             "payment": mock_payment,
@@ -136,6 +320,7 @@ def mock_s3_client():
 async def test_client():
     """Create a test HTTP client."""
     from unittest.mock import MagicMock
+
     client = MagicMock()
     client.get = AsyncMock()
     client.post = AsyncMock()
@@ -163,6 +348,10 @@ def reset_environment():
     yield
     os.environ.clear()
     os.environ.update(original_env)
+    # Ensure test environment variables are restored
+    os.environ["ENVIRONMENT"] = "test"
+    os.environ["MONGODB_URL"] = "mongodb://localhost:27017"
+    os.environ["MONGODB_DB_NAME"] = "test_federated_health_ai"
 
 
 @pytest.fixture
