@@ -9,7 +9,18 @@ from slowapi.errors import RateLimitExceeded
 
 from app.config import get_settings
 from app.database import connect_to_mongo, close_mongo_connection
-from app.routers import auth, password, profile, patients
+from app.routers import (
+    auth,
+    password,
+    profile,
+    patients,
+    appointments,
+    consultations,
+    payments,
+    analytics,
+    search,
+    notifications,
+)
 
 settings = get_settings()
 
@@ -38,6 +49,12 @@ app.include_router(auth.router)
 app.include_router(profile.router)
 app.include_router(password.router)
 app.include_router(patients.router)
+app.include_router(appointments.router)
+app.include_router(consultations.router)
+app.include_router(payments.router)
+app.include_router(analytics.router)
+app.include_router(search.router)
+app.include_router(notifications.router)
 
 
 @app.on_event("startup")

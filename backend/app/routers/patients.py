@@ -38,9 +38,7 @@ def get_health_score_service() -> HealthScoreService:
 
 
 async def optional_auth(
-    credentials: HTTPAuthorizationCredentials = Depends(
-        security if not TESTING_MODE else lambda: None
-    ),
+    credentials: HTTPAuthorizationCredentials = Depends(security if not TESTING_MODE else lambda: None),
 ):
     """Optional authentication for testing."""
     if TESTING_MODE:
@@ -139,9 +137,7 @@ async def add_medical_history(
     Records a new medical condition, diagnosis, and treatment notes.
     """
     try:
-        result = await service.add_medical_history(
-            current_user["user_id"], history_data
-        )
+        result = await service.add_medical_history(current_user["user_id"], history_data)
         return result
     except ValueError as e:
         raise HTTPException(
@@ -183,9 +179,7 @@ async def update_medical_history(
     Allows updating status and treatment notes for a specific history record.
     """
     try:
-        history = await service.update_medical_history(
-            current_user["user_id"], history_id, update_data
-        )
+        history = await service.update_medical_history(current_user["user_id"], history_id, update_data)
         if not history:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -285,9 +279,7 @@ async def get_health_score(
             detail="Patient profile not found",
         )
 
-    health_score = await health_service.calculate_health_score(
-        patient["patient_id"], patient
-    )
+    health_score = await health_service.calculate_health_score(patient["patient_id"], patient)
     return health_score
 
 
@@ -332,6 +324,7 @@ async def get_insurance(
 
         # Check if insurance is expired
         from datetime import datetime
+
         expiry_date = datetime.fromisoformat(insurance["expiry_date"])
         insurance["is_expired"] = expiry_date < datetime.utcnow()
 

@@ -181,18 +181,20 @@ async def test_get_medical_history_endpoint(mock_database, mock_patient_data):
 
     mock_database.patients.find_one = AsyncMock(return_value=mock_patient_data)
     mock_cursor = AsyncMock()
-    mock_cursor.to_list = AsyncMock(return_value=[
-        {
-            "history_id": "MH1",
-            "patient_id": "PT123",
-            "condition_name": "Diabetes",
-            "diagnosis_date": "2020-01-01",
-            "status": "active",
-            "treatment_notes": "Insulin therapy",
-            "created_at": datetime.utcnow(),
-            "updated_at": datetime.utcnow(),
-        }
-    ])
+    mock_cursor.to_list = AsyncMock(
+        return_value=[
+            {
+                "history_id": "MH1",
+                "patient_id": "PT123",
+                "condition_name": "Diabetes",
+                "diagnosis_date": "2020-01-01",
+                "status": "active",
+                "treatment_notes": "Insulin therapy",
+                "created_at": datetime.utcnow(),
+                "updated_at": datetime.utcnow(),
+            }
+        ]
+    )
     mock_database.medical_history.find = Mock(return_value=mock_cursor)
 
     service = PatientService(mock_database)
@@ -210,16 +212,18 @@ async def test_update_medical_history_endpoint(mock_database, mock_patient_data)
 
     mock_database.patients.find_one = AsyncMock(return_value=mock_patient_data)
     mock_database.medical_history.update_one = AsyncMock(return_value=Mock(matched_count=1))
-    mock_database.medical_history.find_one = AsyncMock(return_value={
-        "history_id": "MH1",
-        "status": "resolved",
-        "treatment_notes": "Updated notes",
-        "patient_id": "PT123",
-        "condition_name": "Diabetes",
-        "diagnosis_date": "2020-01-01",
-        "created_at": datetime.utcnow(),
-        "updated_at": datetime.utcnow(),
-    })
+    mock_database.medical_history.find_one = AsyncMock(
+        return_value={
+            "history_id": "MH1",
+            "status": "resolved",
+            "treatment_notes": "Updated notes",
+            "patient_id": "PT123",
+            "condition_name": "Diabetes",
+            "diagnosis_date": "2020-01-01",
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow(),
+        }
+    )
 
     service = PatientService(mock_database)
     update_data = MedicalHistoryUpdate(status="resolved", treatment_notes="Updated notes")
@@ -241,11 +245,7 @@ async def test_add_allergy_endpoint(mock_database, mock_patient_data):
     mock_database.allergies.insert_one = AsyncMock()
 
     service = PatientService(mock_database)
-    allergy_data = AllergyCreate(
-        allergy_name="Peanuts",
-        severity="severe",
-        reaction_description="Anaphylaxis"
-    )
+    allergy_data = AllergyCreate(allergy_name="Peanuts", severity="severe", reaction_description="Anaphylaxis")
 
     result = await service.add_allergy("user123", allergy_data)
 
@@ -260,16 +260,18 @@ async def test_get_allergies_endpoint(mock_database, mock_patient_data):
 
     mock_database.patients.find_one = AsyncMock(return_value=mock_patient_data)
     mock_cursor = AsyncMock()
-    mock_cursor.to_list = AsyncMock(return_value=[
-        {
-            "allergy_id": "AL1",
-            "patient_id": "PT123",
-            "allergy_name": "Penicillin",
-            "severity": "severe",
-            "reaction_description": "Anaphylactic reaction",
-            "created_at": datetime.utcnow(),
-        }
-    ])
+    mock_cursor.to_list = AsyncMock(
+        return_value=[
+            {
+                "allergy_id": "AL1",
+                "patient_id": "PT123",
+                "allergy_name": "Penicillin",
+                "severity": "severe",
+                "reaction_description": "Anaphylactic reaction",
+                "created_at": datetime.utcnow(),
+            }
+        ]
+    )
     mock_database.allergies.find = Mock(return_value=mock_cursor)
 
     service = PatientService(mock_database)
@@ -301,12 +303,16 @@ async def test_get_health_score_endpoint(mock_database, mock_patient_data):
 
     # Setup mock database responses
     mock_database.medical_history.count_documents = AsyncMock(return_value=2)
-    mock_database.medical_history.find = Mock(return_value=AsyncMock(
-        to_list=AsyncMock(return_value=[
-            {"treatment_notes": "Take medication pills twice daily"},
-            {"treatment_notes": "No medicine required"}
-        ])
-    ))
+    mock_database.medical_history.find = Mock(
+        return_value=AsyncMock(
+            to_list=AsyncMock(
+                return_value=[
+                    {"treatment_notes": "Take medication pills twice daily"},
+                    {"treatment_notes": "No medicine required"},
+                ]
+            )
+        )
+    )
 
     service = HealthScoreService(mock_database)
 
@@ -333,7 +339,7 @@ async def test_add_insurance_new_endpoint(mock_database, mock_patient_data):
         provider_name="BlueCross",
         policy_number="BC123456",
         coverage_type="premium",
-        expiry_date=(datetime.utcnow() + timedelta(days=365)).isoformat()
+        expiry_date=(datetime.utcnow() + timedelta(days=365)).isoformat(),
     )
 
     result = await service.add_insurance("user123", insurance_data)
@@ -357,7 +363,7 @@ async def test_add_insurance_update_endpoint(mock_database, mock_patient_data, m
         provider_name="BlueCross Updated",
         policy_number="BC123456",
         coverage_type="standard",
-        expiry_date=(datetime.utcnow() + timedelta(days=365)).isoformat()
+        expiry_date=(datetime.utcnow() + timedelta(days=365)).isoformat(),
     )
 
     result = await service.add_insurance("user123", insurance_data)
@@ -495,11 +501,7 @@ async def test_add_allergy_for_nonexistent_patient_fails(mock_database):
     mock_database.patients.find_one = AsyncMock(return_value=None)
 
     service = PatientService(mock_database)
-    allergy_data = AllergyCreate(
-        allergy_name="Peanuts",
-        severity="severe",
-        reaction_description="Anaphylaxis"
-    )
+    allergy_data = AllergyCreate(allergy_name="Peanuts", severity="severe", reaction_description="Anaphylaxis")
 
     with pytest.raises(ValueError, match="Patient not found"):
         await service.add_allergy("nonexistent", allergy_data)

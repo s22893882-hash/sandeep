@@ -205,9 +205,7 @@ async def test_get_medical_history(mock_database, mock_patient):
     """Test retrieving medical history."""
     mock_database.patients.find_one = AsyncMock(return_value=mock_patient)
     mock_cursor = AsyncMock()
-    mock_cursor.to_list = AsyncMock(return_value=[
-        {"history_id": "MH1", "condition_name": "Diabetes", "status": "active"}
-    ])
+    mock_cursor.to_list = AsyncMock(return_value=[{"history_id": "MH1", "condition_name": "Diabetes", "status": "active"}])
     mock_database.medical_history.find = Mock(return_value=mock_cursor)
 
     service = PatientService(mock_database)
@@ -222,11 +220,9 @@ async def test_update_medical_history_success(mock_database, mock_patient):
     """Test updating medical history record."""
     mock_database.patients.find_one = AsyncMock(return_value=mock_patient)
     mock_database.medical_history.update_one = AsyncMock(return_value=Mock(matched_count=1))
-    mock_database.medical_history.find_one = AsyncMock(return_value={
-        "history_id": "MH1",
-        "status": "resolved",
-        "treatment_notes": "Updated notes"
-    })
+    mock_database.medical_history.find_one = AsyncMock(
+        return_value={"history_id": "MH1", "status": "resolved", "treatment_notes": "Updated notes"}
+    )
 
     service = PatientService(mock_database)
     update_data = MedicalHistoryUpdate(status="resolved", treatment_notes="Updated notes")
@@ -245,9 +241,7 @@ async def test_add_allergy_success(mock_database, mock_patient):
 
     service = PatientService(mock_database)
     allergy_data = AllergyCreate(
-        allergy_name="Peanuts",
-        severity="severe",
-        reaction_description="Swelling and difficulty breathing"
+        allergy_name="Peanuts", severity="severe", reaction_description="Swelling and difficulty breathing"
     )
 
     result = await service.add_allergy("user123", allergy_data)
@@ -262,9 +256,7 @@ async def test_get_allergies(mock_database, mock_patient):
     """Test retrieving allergies."""
     mock_database.patients.find_one = AsyncMock(return_value=mock_patient)
     mock_cursor = AsyncMock()
-    mock_cursor.to_list = AsyncMock(return_value=[
-        {"allergy_id": "AL1", "allergy_name": "Penicillin", "severity": "severe"}
-    ])
+    mock_cursor.to_list = AsyncMock(return_value=[{"allergy_id": "AL1", "allergy_name": "Penicillin", "severity": "severe"}])
     mock_database.allergies.find = Mock(return_value=mock_cursor)
 
     service = PatientService(mock_database)
@@ -299,7 +291,7 @@ async def test_add_insurance_new(mock_database, mock_patient):
         provider_name="BlueCross",
         policy_number="BC123456",
         coverage_type="premium",
-        expiry_date=(datetime.utcnow() + timedelta(days=365)).isoformat()
+        expiry_date=(datetime.utcnow() + timedelta(days=365)).isoformat(),
     )
 
     result = await service.add_insurance("user123", insurance_data)
@@ -320,7 +312,7 @@ async def test_add_insurance_update_existing(mock_database, mock_patient, mock_i
         provider_name="BlueCross Updated",
         policy_number="BC123456",
         coverage_type="standard",
-        expiry_date=(datetime.utcnow() + timedelta(days=365)).isoformat()
+        expiry_date=(datetime.utcnow() + timedelta(days=365)).isoformat(),
     )
 
     result = await service.add_insurance("user123", insurance_data)
@@ -455,12 +447,16 @@ async def test_calculate_health_score(mock_database, mock_patient):
     """Test complete health score calculation."""
     # Setup mock database responses
     mock_database.medical_history.count_documents = AsyncMock(return_value=2)
-    mock_database.medical_history.find = Mock(return_value=AsyncMock(
-        to_list=AsyncMock(return_value=[
-            {"treatment_notes": "Take medication pills twice daily"},
-            {"treatment_notes": "No medicine required"}
-        ])
-    ))
+    mock_database.medical_history.find = Mock(
+        return_value=AsyncMock(
+            to_list=AsyncMock(
+                return_value=[
+                    {"treatment_notes": "Take medication pills twice daily"},
+                    {"treatment_notes": "No medicine required"},
+                ]
+            )
+        )
+    )
 
     service = HealthScoreService(mock_database)
 
@@ -490,13 +486,17 @@ async def test_get_active_conditions_count(mock_database):
 @pytest.mark.unit
 async def test_get_medications_count(mock_database):
     """Test estimating medication count."""
-    mock_database.medical_history.find = Mock(return_value=AsyncMock(
-        to_list=AsyncMock(return_value=[
-            {"treatment_notes": "Take medication and pills"},
-            {"treatment_notes": "No medicine required"},
-            {"treatment_notes": "Dosage: 5mg tablet"}
-        ])
-    ))
+    mock_database.medical_history.find = Mock(
+        return_value=AsyncMock(
+            to_list=AsyncMock(
+                return_value=[
+                    {"treatment_notes": "Take medication and pills"},
+                    {"treatment_notes": "No medicine required"},
+                    {"treatment_notes": "Dosage: 5mg tablet"},
+                ]
+            )
+        )
+    )
 
     service = HealthScoreService(mock_database)
     count = await service._get_medications_count("PT123")
