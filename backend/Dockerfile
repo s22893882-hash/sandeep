@@ -1,5 +1,5 @@
 # Multi-stage build for Python backend
-FROM python:3.11-slim as builder
+FROM python:3.14-slim as builder
 
 WORKDIR /app
 
@@ -16,7 +16,7 @@ COPY requirements.txt requirements-dev.txt ./
 RUN pip install --no-cache-dir --user -r requirements.txt
 
 # Final stage
-FROM python:3.11-slim
+FROM python:3.14-slim
 
 WORKDIR /app
 
