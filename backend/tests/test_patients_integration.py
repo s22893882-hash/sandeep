@@ -1,23 +1,12 @@
 """Integration tests for patient management API endpoints."""
-import pytest
+# pylint: disable=duplicate-code,redefined-outer-name,import-outside-toplevel
 import os
-from unittest.mock import Mock, AsyncMock, patch
 from datetime import datetime, timedelta
+from unittest.mock import AsyncMock, Mock
+
+import pytest
 
 os.environ["ENVIRONMENT"] = "test"
-
-
-@pytest.fixture
-def mock_database():
-    """Mock MongoDB database for testing."""
-    db = Mock()
-    db.patients = Mock()
-    db.medical_history = Mock()
-    db.allergies = Mock()
-    db.insurance = Mock()
-    db.create_index = AsyncMock()
-    db.create_indexes = AsyncMock()
-    return db
 
 
 @pytest.fixture
@@ -91,10 +80,10 @@ def mock_insurance_data():
 
 
 @pytest.mark.integration
-async def test_register_patient_endpoint(mock_database, mock_patient_data):
+async def test_register_patient_endpoint(mock_database):
     """Test POST /api/patients/register endpoint."""
-    from app.services.patient_service import PatientService
     from app.models.patient import PatientCreate
+    from app.services.patient_service import PatientService
 
     mock_database.patients.find_one = AsyncMock(return_value=None)
     mock_database.patients.insert_one = AsyncMock()
@@ -136,8 +125,8 @@ async def test_get_patient_profile_endpoint(mock_database, mock_patient_data):
 @pytest.mark.integration
 async def test_update_patient_profile_endpoint(mock_database, mock_patient_data):
     """Test PUT /api/patients/profile endpoint."""
-    from app.services.patient_service import PatientService
     from app.models.patient import PatientUpdate
+    from app.services.patient_service import PatientService
 
     mock_database.patients.find_one = AsyncMock(return_value=mock_patient_data)
     mock_database.patients.update_one = AsyncMock(return_value=Mock(matched_count=1))
@@ -154,8 +143,8 @@ async def test_update_patient_profile_endpoint(mock_database, mock_patient_data)
 @pytest.mark.integration
 async def test_add_medical_history_endpoint(mock_database, mock_patient_data):
     """Test POST /api/patients/medical-history endpoint."""
-    from app.services.patient_service import PatientService
     from app.models.patient import MedicalHistoryCreate
+    from app.services.patient_service import PatientService
 
     mock_database.patients.find_one = AsyncMock(return_value=mock_patient_data)
     mock_database.medical_history.insert_one = AsyncMock()
@@ -207,8 +196,8 @@ async def test_get_medical_history_endpoint(mock_database, mock_patient_data):
 @pytest.mark.integration
 async def test_update_medical_history_endpoint(mock_database, mock_patient_data):
     """Test PUT /api/patients/medical-history/{history_id} endpoint."""
-    from app.services.patient_service import PatientService
     from app.models.patient import MedicalHistoryUpdate
+    from app.services.patient_service import PatientService
 
     mock_database.patients.find_one = AsyncMock(return_value=mock_patient_data)
     mock_database.medical_history.update_one = AsyncMock(return_value=Mock(matched_count=1))
@@ -238,8 +227,8 @@ async def test_update_medical_history_endpoint(mock_database, mock_patient_data)
 @pytest.mark.integration
 async def test_add_allergy_endpoint(mock_database, mock_patient_data):
     """Test POST /api/patients/allergies endpoint."""
-    from app.services.patient_service import PatientService
     from app.models.patient import AllergyCreate
+    from app.services.patient_service import PatientService
 
     mock_database.patients.find_one = AsyncMock(return_value=mock_patient_data)
     mock_database.allergies.insert_one = AsyncMock()
@@ -327,8 +316,8 @@ async def test_get_health_score_endpoint(mock_database, mock_patient_data):
 @pytest.mark.integration
 async def test_add_insurance_new_endpoint(mock_database, mock_patient_data):
     """Test POST /api/patients/insurance endpoint (new insurance)."""
-    from app.services.patient_service import PatientService
     from app.models.patient import InsuranceCreate
+    from app.services.patient_service import PatientService
 
     mock_database.patients.find_one = AsyncMock(return_value=mock_patient_data)
     mock_database.insurance.find_one = AsyncMock(return_value=None)
@@ -351,8 +340,8 @@ async def test_add_insurance_new_endpoint(mock_database, mock_patient_data):
 @pytest.mark.integration
 async def test_add_insurance_update_endpoint(mock_database, mock_patient_data, mock_insurance_data):
     """Test POST /api/patients/insurance endpoint (update existing)."""
-    from app.services.patient_service import PatientService
     from app.models.patient import InsuranceCreate
+    from app.services.patient_service import PatientService
 
     mock_database.patients.find_one = AsyncMock(return_value=mock_patient_data)
     mock_database.insurance.find_one = AsyncMock(return_value=mock_insurance_data)
@@ -394,8 +383,8 @@ async def test_get_insurance_endpoint(mock_database, mock_patient_data, mock_ins
 @pytest.mark.integration
 async def test_register_duplicate_patient_fails(mock_database):
     """Test that duplicate patient registration fails."""
-    from app.services.patient_service import PatientService
     from app.models.patient import PatientCreate
+    from app.services.patient_service import PatientService
 
     mock_database.patients.find_one = AsyncMock(return_value={"user_id": "user123"})
 
@@ -459,8 +448,8 @@ async def test_delete_nonexistent_allergy_fails(mock_database, mock_patient_data
 @pytest.mark.integration
 async def test_update_nonexistent_medical_history_fails(mock_database, mock_patient_data):
     """Test updating non-existent medical history raises ValueError."""
-    from app.services.patient_service import PatientService
     from app.models.patient import MedicalHistoryUpdate
+    from app.services.patient_service import PatientService
 
     mock_database.patients.find_one = AsyncMock(return_value=mock_patient_data)
     mock_database.medical_history.update_one = AsyncMock(return_value=Mock(matched_count=0))
@@ -475,8 +464,8 @@ async def test_update_nonexistent_medical_history_fails(mock_database, mock_pati
 @pytest.mark.integration
 async def test_add_medical_history_for_nonexistent_patient_fails(mock_database):
     """Test adding medical history for non-existent patient raises ValueError."""
-    from app.services.patient_service import PatientService
     from app.models.patient import MedicalHistoryCreate
+    from app.services.patient_service import PatientService
 
     mock_database.patients.find_one = AsyncMock(return_value=None)
 
@@ -495,8 +484,8 @@ async def test_add_medical_history_for_nonexistent_patient_fails(mock_database):
 @pytest.mark.integration
 async def test_add_allergy_for_nonexistent_patient_fails(mock_database):
     """Test adding allergy for non-existent patient raises ValueError."""
-    from app.services.patient_service import PatientService
     from app.models.patient import AllergyCreate
+    from app.services.patient_service import PatientService
 
     mock_database.patients.find_one = AsyncMock(return_value=None)
 

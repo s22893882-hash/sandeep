@@ -1,11 +1,13 @@
-import os
-import pytest
-from typing import Generator, AsyncGenerator
-from unittest.mock import Mock, AsyncMock, patch
 import asyncio
-from httpx import AsyncClient, ASGITransport
+import os
+from datetime import datetime, timedelta
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
+
+import pytest
+from httpx import ASGITransport, AsyncClient
 from mongomock import MongoClient
-from datetime import datetime
+
+# pylint: disable=redefined-outer-name,import-outside-toplevel
 
 os.environ["ENVIRONMENT"] = "test"
 os.environ["MONGODB_URL"] = "mongodb://localhost:27017"
@@ -189,6 +191,19 @@ async def verified_user(db):
 
 
 @pytest.fixture
+def mock_database():
+    """Mock MongoDB database for testing."""
+    db = Mock()
+    db.patients = Mock()
+    db.medical_history = Mock()
+    db.allergies = Mock()
+    db.insurance = Mock()
+    db.create_index = AsyncMock()
+    db.create_indexes = AsyncMock()
+    return db
+
+
+@pytest.fixture
 async def client(db):
     """Create test HTTP client."""
     # Import app here to avoid circular imports
@@ -272,7 +287,6 @@ def mock_allergy_record():
 def mock_insurance_record():
     """Create a mock insurance record."""
     from bson import ObjectId
-    from datetime import timedelta
 
     return {
         "_id": ObjectId(),
@@ -288,7 +302,7 @@ def mock_insurance_record():
 
 
 @pytest.fixture
-async def auth_headers(verified_user, db):
+async def auth_headers(verified_user):
     """Create authorization headers for authenticated requests."""
     from app.utils.jwt import create_access_token
 
@@ -319,7 +333,11 @@ def test_admin_user():
 @pytest.fixture
 def auth_token():
     """Generate a mock JWT token."""
-    return "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+    return (
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9."
+        "eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ."
+        "SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+    )
 
 
 @pytest.fixture
@@ -395,8 +413,6 @@ def mock_s3_client():
 @pytest.fixture
 async def test_client():
     """Create a test HTTP client."""
-    from unittest.mock import MagicMock
-
     client = MagicMock()
     client.get = AsyncMock()
     client.post = AsyncMock()
