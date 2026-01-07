@@ -9,14 +9,14 @@ from slowapi.errors import RateLimitExceeded
 
 from app.config import get_settings
 from app.database import connect_to_mongo, close_mongo_connection
-from app.routers import auth, password, profile
+from app.routers import auth, password, profile, patients
 
 settings = get_settings()
 
 app = FastAPI(
     title=settings.app_name,
     version=settings.app_version,
-    description="Federated Health AI Platform - User Management API",
+    description="Federated Health AI Platform - User & Patient Management API",
 )
 
 # Rate limiter
@@ -37,6 +37,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(profile.router)
 app.include_router(password.router)
+app.include_router(patients.router)
 
 
 @app.on_event("startup")
@@ -65,7 +66,7 @@ def health_endpoint():
 def root():
     """Root endpoint."""
     return {
-        "message": "Federated Health AI Platform - User Management API",
+        "message": "Federated Health AI Platform - User & Patient Management API",
         "version": settings.app_version,
         "docs": "/docs",
     }

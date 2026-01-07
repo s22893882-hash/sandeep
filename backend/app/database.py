@@ -37,3 +37,15 @@ def get_database() -> AsyncIOMotorDatabase:
 async def get_mongo_database() -> AsyncIOMotorDatabase:
     """Dependency to get database instance."""
     return database
+
+
+class DatabaseWrapper:
+    """Database wrapper for compatibility with patient services."""
+
+    def get_db(self) -> AsyncIOMotorDatabase:
+        """Get database instance."""
+        return database
+
+
+# Create db instance for patient services compatibility
+db = DatabaseWrapper()
