@@ -1,6 +1,8 @@
 """
 Database connection and MongoDB client management.
 """
+import random
+from datetime import datetime
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 from app.config import get_settings
 
@@ -37,3 +39,11 @@ def get_database() -> AsyncIOMotorDatabase:
 async def get_mongo_database() -> AsyncIOMotorDatabase:
     """Dependency to get database instance."""
     return database
+
+
+def generate_id(prefix: str = "") -> str:
+    """Generate a unique ID for database records."""
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+    random_part = random.randint(1000, 9999)
+    unique_str = f"{prefix}{timestamp}{random_part}"
+    return unique_str[:32] if unique_str else generate_id(prefix)

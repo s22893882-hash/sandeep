@@ -212,6 +212,82 @@ async def client(db):
 
 
 @pytest.fixture
+def mock_patient_record():
+    """Create a mock patient record."""
+    from bson import ObjectId
+
+    return {
+        "_id": ObjectId(),
+        "patient_id": "PT20240101120000001",
+        "user_id": "user123",
+        "full_name": "John Doe",
+        "date_of_birth": "1990-01-01",
+        "gender": "male",
+        "blood_type": "O+",
+        "height_cm": 175.0,
+        "weight_kg": 70.0,
+        "emergency_contact_name": "Jane Doe",
+        "emergency_contact_phone": "1234567890",
+        "created_at": datetime.utcnow(),
+        "updated_at": datetime.utcnow(),
+        "is_active": True,
+    }
+
+
+@pytest.fixture
+def mock_medical_history_record():
+    """Create a mock medical history record."""
+    from bson import ObjectId
+
+    return {
+        "_id": ObjectId(),
+        "history_id": "MH20240101120000001",
+        "patient_id": "PT20240101120000001",
+        "condition_name": "Diabetes",
+        "diagnosis_date": "2020-01-01",
+        "status": "active",
+        "treatment_notes": "Insulin therapy",
+        "created_at": datetime.utcnow(),
+        "updated_at": datetime.utcnow(),
+    }
+
+
+@pytest.fixture
+def mock_allergy_record():
+    """Create a mock allergy record."""
+    from bson import ObjectId
+
+    return {
+        "_id": ObjectId(),
+        "allergy_id": "AL20240101120000001",
+        "patient_id": "PT20240101120000001",
+        "allergy_name": "Penicillin",
+        "severity": "severe",
+        "reaction_description": "Anaphylaxis",
+        "created_at": datetime.utcnow(),
+    }
+
+
+@pytest.fixture
+def mock_insurance_record():
+    """Create a mock insurance record."""
+    from bson import ObjectId
+    from datetime import timedelta
+
+    return {
+        "_id": ObjectId(),
+        "insurance_id": "IN20240101120000001",
+        "patient_id": "PT20240101120000001",
+        "provider_name": "BlueCross",
+        "policy_number": "BC123456",
+        "coverage_type": "premium",
+        "expiry_date": (datetime.utcnow() + timedelta(days=365)).isoformat(),
+        "created_at": datetime.utcnow(),
+        "updated_at": datetime.utcnow(),
+    }
+
+
+@pytest.fixture
 async def auth_headers(verified_user, db):
     """Create authorization headers for authenticated requests."""
     from app.utils.jwt import create_access_token
@@ -249,7 +325,7 @@ def auth_token():
 @pytest.fixture
 def mock_jwt_decode():
     """Mock JWT decode function."""
-    with patch("jwt.decode") as mock:
+    with patch("jose.jwt.decode") as mock:
         mock.return_value = {
             "sub": "1",
             "email": "test@example.com",
