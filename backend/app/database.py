@@ -2,6 +2,7 @@
 Database connection and MongoDB client management.
 """
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
+from bson import ObjectId
 from app.config import get_settings
 
 settings = get_settings()
@@ -37,6 +38,12 @@ def get_database() -> AsyncIOMotorDatabase:
 async def get_mongo_database() -> AsyncIOMotorDatabase:
     """Dependency to get database instance."""
     return database
+
+
+def generate_id(prefix: str = "") -> str:
+    """Generate a unique ID with optional prefix."""
+    oid = str(ObjectId())
+    return f"{prefix}{oid}" if prefix else oid
 
 
 class DatabaseWrapper:

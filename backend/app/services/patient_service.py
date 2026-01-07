@@ -1,6 +1,6 @@
 """Patient management business logic."""
 from typing import Optional, List, Dict, Any
-from datetime import datetime, timedelta
+from datetime import datetime
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.models.patient import (
@@ -10,7 +10,6 @@ from app.models.patient import (
     MedicalHistoryUpdate,
     AllergyCreate,
     InsuranceCreate,
-    InsuranceUpdate,
 )
 from app.database import generate_id
 
