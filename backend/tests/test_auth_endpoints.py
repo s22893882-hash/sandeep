@@ -2,13 +2,7 @@
 Tests for authentication endpoints.
 """
 import pytest
-from datetime import datetime, timedelta
 from httpx import AsyncClient
-from bson import ObjectId
-
-from app.database import get_database
-from app.utils.jwt import verify_token
-from app.utils.password import hash_password
 
 
 @pytest.mark.asyncio
@@ -181,8 +175,7 @@ class TestAuthEndpoints:
     async def test_refresh_token_expired(self, client: AsyncClient, verified_user):
         """Test refresh token with expired token."""
         # Create an expired refresh token
-        from app.utils.jwt import create_refresh_token, decode_token
-        import json
+        from app.utils.jwt import create_refresh_token
 
         # Create token and manually modify exp
         token_data = {
@@ -202,17 +195,24 @@ class TestAuthEndpoints:
 
     async def test_login_rate_limiting(self, client: AsyncClient, verified_user):
         """Test login rate limiting."""
-        # Attempt 6 logins (limit is 5 per 15 minutes)
-        for i in range(6):
-            response = await client.post(
-                "/api/users/login",
-                json={
-                    "email": verified_user["email"],
-                    "password": f"WrongPassword{i}!",
-                },
-            )
-            # After 5 attempts, should be rate limited
-            if i >= 5:
-                assert response.status_code == 429
-            else:
-                assert response.status_code in [401, 429]
+        from app.routers.auth import limiter
+
+        original_enabled = limiter.enabled
+        limiter.enabled = True
+        try:
+            # Attempt 6 logins (limit is 5 per 15 minutes)
+            for i in range(6):
+                response = await client.post(
+                    "/api/users/login",
+                    json={
+                        "email": verified_user["email"],
+                        "password": f"WrongPassword{i}!",
+                    },
+                )
+                # After 5 attempts, should be rate limited
+                if i >= 5:
+                    assert response.status_code == 429
+                else:
+                    assert response.status_code in [401, 429]
+        finally:
+            limiter.enabled = original_enabled

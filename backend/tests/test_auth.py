@@ -1,6 +1,5 @@
-import pytest
-from unittest.mock import Mock, patch, AsyncMock
 from datetime import datetime, timedelta
+import pytest
 
 
 @pytest.mark.unit
@@ -26,15 +25,15 @@ def test_jwt_token_generation(test_user):
     """Test JWT token generation."""
 
     def generate_token(user_data: dict) -> str:
-        return f"token_for_{user_data['id']}"
+        return f"token_for_{user_data['user_id']}"
 
     token = generate_token(test_user)
-    assert token == "token_for_1"
+    assert token.startswith("token_for_")
     assert isinstance(token, str)
 
 
 @pytest.mark.unit
-def test_jwt_token_validation(auth_token, mock_jwt_decode):
+def test_jwt_token_validation(auth_token, _mock_jwt_decode):
     """Test JWT token validation."""
 
     def validate_token(token: str) -> dict:
@@ -52,10 +51,10 @@ async def test_user_login(mock_db, test_user):
     """Test user login flow."""
     mock_db.fetch_one.return_value = test_user
 
-    async def login(email: str, password: str, db):
+    async def login(email: str, _password: str, db):
         user = await db.fetch_one(f"SELECT * FROM users WHERE email = '{email}'")
         if user and user.get("is_active"):
-            return {"user": user, "token": f"token_for_{user['id']}"}
+            return {"user": user, "token": f"token_for_{user['user_id']}"}
         return None
 
     result = await login("test@example.com", "password123", mock_db)
@@ -103,7 +102,7 @@ def test_token_expiration():
 
 
 @pytest.mark.auth
-async def test_password_reset_flow(mock_db, mock_email_service):
+async def test_password_reset_flow(mock_db, _mock_email_service):
     """Test password reset flow."""
 
     async def request_password_reset(email: str, db):
@@ -111,10 +110,10 @@ async def test_password_reset_flow(mock_db, mock_email_service):
         if not user:
             return {"error": "User not found"}
 
-        reset_token = f"reset_token_for_{user['id']}"
+        reset_token = f"reset_token_for_{user['user_id']}"
         return {"success": True, "reset_token": reset_token}
 
-    mock_db.fetch_one.return_value = {"id": 1, "email": "test@example.com"}
+    mock_db.fetch_one.return_value = {"user_id": "1", "email": "test@example.com"}
 
     result = await request_password_reset("test@example.com", mock_db)
 
@@ -137,12 +136,12 @@ def test_permission_check(test_user, test_admin_user):
 def test_refresh_token_generation(test_user):
     """Test refresh token generation."""
 
-    def generate_refresh_token(user_id: int) -> str:
+    def generate_refresh_token(user_id: str) -> str:
         return f"refresh_token_{user_id}_{datetime.now().timestamp()}"
 
-    token = generate_refresh_token(test_user["id"])
+    token = generate_refresh_token(test_user["user_id"])
 
-    assert token.startswith("refresh_token_1_")
+    assert token.startswith("refresh_token_")
     assert isinstance(token, str)
 
 

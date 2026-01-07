@@ -3,7 +3,6 @@ Tests for password reset endpoints.
 """
 import pytest
 from httpx import AsyncClient
-from bson import ObjectId
 
 
 @pytest.mark.asyncio
@@ -40,8 +39,6 @@ class TestPasswordResetEndpoints:
         )
 
         # Get the reset code from database
-        from datetime import datetime, timedelta
-
         reset_record = await db.password_resets.find_one({"email": test_user["email"], "used": False})
         reset_code = reset_record["reset_code"]
 
@@ -64,23 +61,23 @@ class TestPasswordResetEndpoints:
         assert response.status_code == 400
         assert "Invalid reset code" in response.json()["detail"]
 
-    async def test_password_reset_confirm_success(self, client: AsyncClient, test_user: dict, db):
+    async def test_password_reset_confirm_success(self, client: AsyncClient, verified_user: dict, db):
         """Test successful password reset confirmation."""
         # Request reset
         await client.post(
             "/api/users/password-reset-request",
-            json={"email": test_user["email"]},
+            json={"email": verified_user["email"]},
         )
 
         # Get reset code
-        reset_record = await db.password_resets.find_one({"email": test_user["email"], "used": False})
+        reset_record = await db.password_resets.find_one({"email": verified_user["email"], "used": False})
         reset_code = reset_record["reset_code"]
 
         # Confirm reset with new password
         response = await client.post(
             "/api/users/password-reset-confirm",
             json={
-                "email": test_user["email"],
+                "email": verified_user["email"],
                 "reset_code": reset_code,
                 "new_password": "NewPassword456!",
             },
@@ -93,7 +90,7 @@ class TestPasswordResetEndpoints:
         login_response = await client.post(
             "/api/users/login",
             json={
-                "email": test_user["email"],
+                "email": verified_user["email"],
                 "password": "NewPassword456!",
             },
         )
