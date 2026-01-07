@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-import jwt
+from jose import jwt
 import pytest
 
 

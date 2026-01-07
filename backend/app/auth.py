@@ -1,16 +1,20 @@
 """Authentication and authorization utilities."""
 import os
-from typing import Optional, Dict, Any, Callable
+from typing import Optional, Dict, Any
 from datetime import datetime, timedelta
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import JWTError, jwt
 
 
+from app.config import get_settings
+
+settings = get_settings()
+
 # Security settings
-SECRET_KEY = os.getenv("JWT_SECRET_KEY", "your-secret-key-here-change-in-production")
-ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
+SECRET_KEY = settings.jwt_secret_key
+ALGORITHM = settings.jwt_algorithm
+ACCESS_TOKEN_EXPIRE_MINUTES = settings.access_token_expire_minutes
 
 security = HTTPBearer()
 
@@ -44,7 +48,7 @@ def decode_token(token: str) -> Dict[str, Any]:
 
 
 async def get_current_user(
-    credentials: Optional[HTTPAuthorizationCredentials] = None,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
 ) -> Dict[str, Any]:
     """Get current authenticated user from JWT token."""
     # In testing mode, allow bypass with test credentials

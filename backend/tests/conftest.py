@@ -33,6 +33,33 @@ class MockAsyncDatabase:
         self.client.close()
 
 
+class MockAsyncCursor:
+    """Mock async cursor for motor compatibility."""
+
+    def __init__(self, cursor):
+        self.cursor = cursor
+
+    def sort(self, *args, **kwargs):
+        self.cursor.sort(*args, **kwargs)
+        return self
+
+    def limit(self, *args, **kwargs):
+        self.cursor.limit(*args, **kwargs)
+        return self
+
+    async def to_list(self, length=None):
+        return list(self.cursor)
+
+    def __aiter__(self):
+        return self
+
+    async def __anext__(self):
+        try:
+            return next(self.cursor)
+        except StopIteration:
+            raise StopAsyncIteration
+
+
 class MockAsyncCollection:
     """Mock async collection using mongomock."""
 
@@ -44,8 +71,13 @@ class MockAsyncCollection:
             return self.collection.find_one(query)
         return None
 
-    async def find(self, query=None):
-        return self.collection.find(query or {})
+    def find(self, query=None, projection=None, sort=None, limit=None):
+        cursor = self.collection.find(query or {}, projection)
+        if sort:
+            cursor = cursor.sort(sort)
+        if limit:
+            cursor = cursor.limit(limit)
+        return MockAsyncCursor(cursor)
 
     async def insert_one(self, document):
         # Remove None values from document before insert
@@ -249,7 +281,7 @@ def auth_token():
 @pytest.fixture
 def mock_jwt_decode():
     """Mock JWT decode function."""
-    with patch("jwt.decode") as mock:
+    with patch("jose.jwt.decode") as mock:
         mock.return_value = {
             "sub": "1",
             "email": "test@example.com",
