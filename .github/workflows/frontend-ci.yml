@@ -61,7 +61,7 @@ jobs:
           npm run test:coverage -- --reporter=json --reporter=text | tee coverage-summary.json
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           file: ./frontend/coverage/coverage-final.json
           flags: frontend
