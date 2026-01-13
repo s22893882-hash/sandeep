@@ -6,7 +6,7 @@ sqlalchemy==2.0.23
 alembic==1.12.1
 asyncpg==0.29.0
 psycopg2-binary==2.9.9
-redis==5.0.1
+redis==7.1.0
 motor==3.3.2
 slowapi==0.1.9
 python-jose[cryptography]==3.4.0
