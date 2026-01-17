@@ -1,6 +1,7 @@
 """
 Database connection and MongoDB client management.
 """
+import uuid
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 from app.config import get_settings
 
@@ -11,6 +12,12 @@ client: AsyncIOMotorClient = None
 
 # Database
 database: AsyncIOMotorDatabase = None
+
+
+def generate_id(prefix: str = "") -> str:
+    """Generate unique ID with optional prefix."""
+    unique_id = str(uuid.uuid4()).replace("-", "")[:12].upper()
+    return f"{prefix}{unique_id}" if prefix else unique_id
 
 
 async def connect_to_mongo():
