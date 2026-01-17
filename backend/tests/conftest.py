@@ -44,8 +44,8 @@ class MockAsyncCollection:
             return self.collection.find_one(query)
         return None
 
-    async def find(self, query=None):
-        return self.collection.find(query or {})
+    def find(self, query=None):
+        return MockAsyncCursor(self.collection.find(query or {}))
 
     async def insert_one(self, document):
         # Remove None values from document before insert
@@ -71,6 +71,35 @@ class MockAsyncCollection:
 
     async def delete_many(self, query):
         return self.collection.delete_many(query)
+
+    async def count_documents(self, query):
+        return self.collection.count_documents(query)
+
+
+class MockAsyncCursor:
+    """Mock async cursor for MongoDB queries."""
+
+    def __init__(self, cursor):
+        self.cursor = cursor
+
+    def sort(self, field, direction=-1):
+        """Sort the cursor."""
+        self.cursor = self.cursor.sort(field, direction)
+        return self
+
+    def skip(self, count):
+        """Skip documents."""
+        self.cursor = self.cursor.skip(count)
+        return self
+
+    def limit(self, count):
+        """Limit results."""
+        self.cursor = self.cursor.limit(count)
+        return self
+
+    async def to_list(self, length=None):
+        """Convert cursor to list."""
+        return list(self.cursor)
 
 
 @pytest.fixture(scope="session")
@@ -113,6 +142,10 @@ async def db(global_db):
     await global_db.users.delete_many({})
     await global_db.otps.delete_many({})
     await global_db.password_resets.delete_many({})
+    await global_db.patients.delete_many({})
+    await global_db.doctors.delete_many({})
+    await global_db.appointments.delete_many({})
+    await global_db.doctor_availability.delete_many({})
     yield global_db
 
 
