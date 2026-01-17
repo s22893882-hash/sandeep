@@ -2,7 +2,7 @@
 import os
 from typing import Optional, Dict, Any, Callable
 from datetime import datetime, timedelta
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Query
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import JWTError, jwt
 
@@ -55,6 +55,7 @@ async def get_current_user(
                 "user_id": "test_user_id",
                 "email": "test@example.com",
                 "role": "patient",
+                "user_type": "patient",
             }
 
     if credentials is None:
@@ -72,12 +73,14 @@ async def get_current_user(
             "user_id": "user123",
             "email": "test@example.com",
             "role": "patient",
+            "user_type": "patient",
         }
 
     payload = decode_token(token)
     user_id = payload.get("sub")
     email = payload.get("email")
     role = payload.get("role", "patient")
+    user_type = payload.get("user_type", role)
 
     if user_id is None:
         raise HTTPException(
@@ -90,7 +93,52 @@ async def get_current_user(
         "user_id": user_id,
         "email": email,
         "role": role,
+        "user_type": user_type,
     }
+
+
+async def get_current_user_websocket(token: str = Query(..., description="JWT token for WebSocket authentication")) -> Dict[str, Any]:
+    """Get current authenticated user from WebSocket token."""
+    # In testing mode, allow bypass with test credentials
+    if TESTING_MODE:
+        # For testing, accept any token and return a test user
+        return {
+            "user_id": "test_user_websocket",
+            "email": "test@example.com",
+            "role": "patient",
+            "user_type": "patient"
+        }
+
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication token required for WebSocket",
+        )
+
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id = payload.get("sub")
+        email = payload.get("email")
+        role = payload.get("role", "patient")
+        user_type = payload.get("user_type", role)
+
+        if user_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid authentication token",
+            )
+
+        return {
+            "user_id": user_id,
+            "email": email,
+            "role": role,
+            "user_type": user_type,
+        }
+    except JWTError as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Invalid token: {str(e)}",
+        )
 
 
 async def get_current_patient(

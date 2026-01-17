@@ -1,6 +1,7 @@
 """
 Database connection and MongoDB client management.
 """
+import secrets
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 from app.config import get_settings
 
@@ -37,6 +38,11 @@ def get_database() -> AsyncIOMotorDatabase:
 async def get_mongo_database() -> AsyncIOMotorDatabase:
     """Dependency to get database instance."""
     return database
+
+
+def generate_id(prefix: str = "") -> str:
+    """Generate unique ID with optional prefix."""
+    return f"{prefix}_{secrets.token_hex(8).upper()}"
 
 
 class DatabaseWrapper:
