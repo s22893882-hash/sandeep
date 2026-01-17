@@ -100,7 +100,7 @@ class ConsultationClose(BaseModel):
 
 class MessageCreate(BaseModel):
     """Model for creating a consultation message."""
-    sender_id: str = Field(..., description="ID of message sender")
+    sender_id: Optional[str] = Field(None, description="ID of message sender (auto-filled from auth)")
     message_text: str = Field(..., min_length=1, max_length=5000, description="Message content")
     message_type: MessageType = Field(default=MessageType.TEXT, description="Type of message")
 
