@@ -7,6 +7,7 @@ from .profile import router as profile_router
 from .password import router as password_router
 from .patients import router as patients_router
 from .consultations import router as consultations_router
+from .payments import router as payments_router
 
 # Export routers for easy inclusion in main app
 router = [
@@ -15,6 +16,7 @@ router = [
     password_router,
     patients_router,
     consultations_router,
+    payments_router,
 ]
 
 __all__ = [
@@ -23,4 +25,5 @@ __all__ = [
     "password_router",
     "patients_router",
     "consultations_router",
+    "payments_router",
 ]
