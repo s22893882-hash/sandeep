@@ -1,6 +1,5 @@
 """Consultation management API endpoints."""
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
-from fastapi.security import HTTPAuthorizationCredentials
 from typing import Optional
 
 from app.auth import (
@@ -22,7 +21,6 @@ from app.models.consultation_message import (
     MessageCreate,
     MessageResponse,
     MessagesListResponse,
-    MessageType,
 )
 from app.models.prescription import (
     PrescriptionCreate,
@@ -31,7 +29,6 @@ from app.models.prescription import (
 )
 from app.models.clinical_notes import (
     ClinicalNotesCreate,
-    ClinicalNotesUpdate,
     ClinicalNotesResponse,
 )
 from app.models.consultation_document import (

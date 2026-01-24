@@ -2,10 +2,9 @@
 from pydantic import BaseModel, Field
 from typing import Optional
 from datetime import datetime
-from enum import Enum
 
 
-class FollowUpPriority(str, Enum):
+class FollowUpPriority(str):
     """Follow-up priority options."""
 
     low = "low"
@@ -13,7 +12,7 @@ class FollowUpPriority(str, Enum):
     high = "high"
 
 
-class FollowUpStatus(str, Enum):
+class FollowUpStatus(str):
     """Follow-up status options."""
 
     scheduled = "scheduled"
