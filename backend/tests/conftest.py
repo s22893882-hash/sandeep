@@ -33,6 +33,51 @@ class MockAsyncDatabase:
         self.client.close()
 
 
+class MockAsyncCursor:
+    """Mock async cursor for find operations."""
+
+    def __init__(self, cursor):
+        self.cursor = cursor
+        self._sort_key = None
+        self._sort_direction = 1
+        self._skip_count = 0
+        self._limit_count = None
+
+    def sort(self, key, direction=1):
+        """Sort the cursor."""
+        self._sort_key = key
+        self._sort_direction = direction
+        # Apply sort to mongomock cursor
+        self.cursor = self.cursor.sort(key, direction)
+        return self
+
+    def skip(self, count):
+        """Skip documents."""
+        self._skip_count = count
+        self.cursor = self.cursor.skip(count)
+        return self
+
+    def limit(self, count):
+        """Limit documents."""
+        self._limit_count = count
+        self.cursor = self.cursor.limit(count)
+        return self
+
+    async def __aiter__(self):
+        """Async iterator for the cursor."""
+        for doc in self.cursor:
+            yield doc
+
+    async def to_list(self, length=None):
+        """Convert cursor to list."""
+        result = []
+        async for doc in self:
+            result.append(doc)
+            if length and len(result) >= length:
+                break
+        return result
+
+
 class MockAsyncCollection:
     """Mock async collection using mongomock."""
 
@@ -45,7 +90,9 @@ class MockAsyncCollection:
         return None
 
     async def find(self, query=None):
-        return self.collection.find(query or {})
+        """Find documents and return an async cursor."""
+        query_obj = query or {}
+        return MockAsyncCursor(self.collection.find(query_obj))
 
     async def insert_one(self, document):
         # Remove None values from document before insert
@@ -71,6 +118,9 @@ class MockAsyncCollection:
 
     async def delete_many(self, query):
         return self.collection.delete_many(query)
+
+    async def count_documents(self, query):
+        return self.collection.count_documents(query or {})
 
 
 @pytest.fixture(scope="session")
@@ -113,6 +163,13 @@ async def db(global_db):
     await global_db.users.delete_many({})
     await global_db.otps.delete_many({})
     await global_db.password_resets.delete_many({})
+    await global_db.consultations.delete_many({})
+    await global_db.consultation_messages.delete_many({})
+    await global_db.prescriptions.delete_many({})
+    await global_db.clinical_notes.delete_many({})
+    await global_db.consultation_documents.delete_many({})
+    await global_db.consultation_feedback.delete_many({})
+    await global_db.follow_up_consultations.delete_many({})
     yield global_db
 
 

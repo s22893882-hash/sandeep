@@ -3,6 +3,8 @@ Database connection and MongoDB client management.
 """
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 from app.config import get_settings
+from datetime import datetime
+from uuid import uuid4
 
 settings = get_settings()
 
@@ -49,3 +51,20 @@ class DatabaseWrapper:
 
 # Create db instance for patient services compatibility
 db = DatabaseWrapper()
+
+
+def generate_id(prefix: str = "") -> str:
+    """
+    Generate a unique ID with optional prefix.
+
+    Args:
+        prefix: Optional prefix for the ID
+
+    Returns:
+        Unique ID string
+    """
+    timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+    random_part = uuid4().hex[:6]
+    if prefix:
+        return f"{prefix}{timestamp}{random_part}"
+    return f"{timestamp}{random_part}"
